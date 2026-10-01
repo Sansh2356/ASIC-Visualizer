@@ -421,8 +421,10 @@ function pick(e){
   raycaster.setFromCamera(pointer,camera);
   // visibility is only ever toggled per part group, so test the ~200 groups rather than walking every mesh
   const cand = []; for(const ref in objs){ const o = objs[ref]; if(isVisible(o.group)) cand.push(...o.meshes); }
+  // the PCB occludes parts on the far side, unless X-ray makes it see-through
+  if(!document.getElementById('oXray').checked) cand.push(boardMesh, ...boardGroup.userData.faces);
   const hits = raycaster.intersectObjects(cand, false);
-  return hits.length ? hits[0].object.userData.ref : null;
+  return hits.length ? hits[0].object.userData.ref || null : null;
 }
 function isVisible(m){ let o=m; while(o){ if(!o.visible) return false; o=o.parent; } return true; }
 function onMove(e){
