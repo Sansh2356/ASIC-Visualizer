@@ -86,7 +86,6 @@ function init(){
   cv.addEventListener('pointerup', onClick);
   cv.addEventListener('pointerleave', ()=>{ tip.hidden = true; hoverRef=null; });
   new ResizeObserver(resize).observe(stage); resize();
-  document.getElementById('loading').remove();
   setView('iso', true);
   animate();
 }
@@ -869,6 +868,7 @@ function boot(){
   if(!window.THREE || !THREE.OrbitControls){ document.getElementById('loading').textContent='Could not load the 3D engine. Check your connection and reload.'; return; }
   try{
     init(); buildLabels(); bindOptions(); renderList(); renderInspector();
+    document.getElementById('loading').remove(); // only once everything is built, so errors stay visible
   }catch(err){ console.error(err); const l=document.getElementById('loading'); if(l) l.textContent='Error: '+err.message; }
 }
 if(document.fonts && document.fonts.ready) document.fonts.ready.then(boot); else boot();
