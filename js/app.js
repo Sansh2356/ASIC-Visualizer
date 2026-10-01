@@ -64,6 +64,7 @@ function init(){
   controls.enableDamping = true; controls.dampingFactor = .08;
   controls.minDistance = 25; controls.maxDistance = 420;
   controls.target.set(0,0,0);
+  controls.addEventListener('start', ()=>{ tween = null; }); // user input wins over a running fly-to
 
   scene.add(new THREE.HemisphereLight(0xdfe9e4, 0x1a1f1d, .75));
   const key = new THREE.DirectionalLight(0xffffff, .78); key.position.set(60,140,70); key.castShadow = true;
