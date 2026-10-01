@@ -85,7 +85,7 @@ function init(){
   cv.addEventListener('pointermove', e=>{ if(!moveEvt) requestAnimationFrame(()=>{ onMove(moveEvt); moveEvt = null; }); moveEvt = e; });
   cv.addEventListener('pointerdown', e=>{ downAt=[e.clientX,e.clientY]; });
   cv.addEventListener('pointerup', onClick);
-  cv.addEventListener('pointerleave', ()=>{ tip.hidden = true; hoverRef=null; });
+  cv.addEventListener('pointerleave', ()=>{ tip.hidden = true; });
   new ResizeObserver(resize).observe(stage); resize();
   setView('iso', true);
   animate();
@@ -142,7 +142,6 @@ function boardTexture(side){
     const [a,b]=P(x,y); g.beginPath(); g.arc(a,b,3,0,Math.PI*2); g.fill(); }
   // thermal via array under ASIC (real board has a dense via field)
   for(let i=-2;i<=2;i++) for(let j=-2;j<=2;j++){ const [a,b]=P(105.6+i*1.4,116.5+j*1.4); g.beginPath(); g.arc(a,b,5,0,Math.PI*2); g.fill(); }
-  // ASIC pads gold on both sides
   const t = new THREE.CanvasTexture(c); t.anisotropy = 8; t.encoding = THREE.sRGBEncoding; return t;
 }
 function roundedRectShape(w,h,r){
@@ -161,32 +160,25 @@ function buildBoard(){
   const faceShape = (side)=>{ const sh = roundedRectShape(BW,BH,1.2);
     HOLES.forEach(([ref,x,y,d])=>{ const [X,Z]=toWorld(x,y); const h=new THREE.Path(); h.absarc(X, side==='top'?-Z:Z, d/2,0,Math.PI*2,true); sh.holes.push(h); }); return sh; };
   const mk = (side)=>{
+    const top = side==='top';
     const m = new THREE.MeshStandardMaterial({map:boardTexture(side), roughness:.45, metalness:.05});
     const f = new THREE.Mesh(new THREE.ShapeGeometry(faceShape(side),24), m);
-    f.rotation.x = side==='top' ? -Math.PI/2 : Math.PI/2;
-    f.position.y = side==='top' ? SURF_T+0.01 : SURF_B-0.01;
-    if(side==='bottom') f.rotation.z = Math.PI; // keep text readable from below
-    if(side==='bottom') f.scale.x = 1;
-    // UV: ShapeGeometry UVs are in shape units; remap 0..1
+    f.rotation.x = top ? -Math.PI/2 : Math.PI/2;
+    f.position.y = top ? SURF_T+0.01 : SURF_B-0.01;
+    // ShapeGeometry UVs are in shape units; remap to 0..1. The bottom face is flipped in both axes so it
+    // reads like KiCad (non-mirrored) when viewed from below.
     const uv = f.geometry.attributes.uv, pos = f.geometry.attributes.position;
-    for(let i=0;i<uv.count;i++){ uv.setXY(i, (pos.getX(i)+BW/2)/BW, (pos.getY(i)+BH/2)/BH); }
+    for(let i=0;i<uv.count;i++){ const u = (pos.getX(i)+BW/2)/BW, v = (pos.getY(i)+BH/2)/BH; uv.setXY(i, top?u:1-u, top?v:1-v); }
     f.receiveShadow = true; boardGroup.add(f); return f;
   };
   boardGroup.userData.faces = [mk('top'), mk('bottom')];
-  boardGroup.userData.faces[1].rotation.set(Math.PI/2,0,0);
-  // flip bottom face mapping so it matches KiCad (non-mirrored) when viewed from below
-  { const f = boardGroup.userData.faces[1]; const uv=f.geometry.attributes.uv, pos=f.geometry.attributes.position;
-    for(let i=0;i<uv.count;i++){ uv.setXY(i, 1-(pos.getX(i)+BW/2)/BW, 1-(pos.getY(i)+BH/2)/BH); } uv.needsUpdate = true; }
-  // fix top face orientation: shape Y maps to -Z after rotation; we want texture row 0 at Z=-BH/2 (KiCad y0)
-  { const f = boardGroup.userData.faces[0]; const uv=f.geometry.attributes.uv, pos=f.geometry.attributes.position;
-    for(let i=0;i<uv.count;i++){ uv.setXY(i, (pos.getX(i)+BW/2)/BW, (pos.getY(i)+BH/2)/BH); } uv.needsUpdate = true; }
   // plated holes rings
   HOLES.forEach(([ref,x,y,d,kind])=>{
     const [X,Z]=toWorld(x,y);
     if(kind==='pad'){
       [SURF_T+0.02,SURF_B-0.02].forEach(yy=>{ const r=new THREE.Mesh(new THREE.RingGeometry(d/2,d/2+1.6,32), MATS.pads); r.rotation.x=-Math.PI/2; r.position.set(X,yy,Z); boardGroup.add(r); });
     }
-    const id = registerSimple(ref, kind==='pad'?'Corner mounting hole':'Heatsink mounting hole', 'mech', 'top', x,y, null,
+    const id = registerSimple(ref, kind==='pad'?'Corner mounting hole':'Heatsink mounting hole', 'mech', 'top', x,y,
       kind==='pad' ? "Plated 3 mm mounting hole tied to ground. Used to mount the board on a stand." :
       "3.5 mm hole, one of four on a ~41 mm square around the ASIC. Screws or springs through these clamp the 40 × 40 mm heatsink onto the chip.");
     const ring = new THREE.Mesh(new THREE.CylinderGeometry(d/2+0.05,d/2+0.05,BT+0.1,24,1,true), new THREE.MeshStandardMaterial({color:0xb8a060,metalness:.8,roughness:.35,side:THREE.DoubleSide}));
@@ -200,7 +192,7 @@ function addObj(ref, data, side){
   objs[ref] = {group:g, meshes:[], data, side, labelEl:null};
   return objs[ref];
 }
-function registerSimple(ref,name,group,side,x,y,dims,desc){
+function registerSimple(ref,name,group,side,x,y,desc){
   const data = {ref,name,group,side,x,y,what:desc, simple:true};
   return addObj(ref,data,side);
 }
@@ -414,7 +406,7 @@ function buildFlows(){
    INTERACTION
    ==================================================================== */
 const tip = document.getElementById('tip');
-let hoverRef = null, downAt = null, downLabel = null; // downLabel: ref of the label a press started on
+let downAt = null, downLabel = null; // downLabel: ref of the label a press started on
 function pick(e){
   const r = cv.getBoundingClientRect();
   pointer.x = ((e.clientX-r.left)/r.width)*2-1; pointer.y = -((e.clientY-r.top)/r.height)*2+1;
@@ -430,7 +422,6 @@ function isVisible(m){ let o=m; while(o){ if(!o.visible) return false; o=o.paren
 function onMove(e){
   if(e.buttons){ tip.hidden = true; return; } // orbiting or panning: no hover feedback needed
   const ref = pick(e);
-  hoverRef = ref;
   if(ref && objs[ref]){
     const d = objs[ref].data, r = stage.getBoundingClientRect();
     tip.innerHTML = `<code>${d.ref}</code>${esc(d.name)}`;
@@ -455,10 +446,9 @@ function flyTo(pos, target, ms=900){
   tween = {p0:camera.position.clone(), t0:controls.target.clone(), p1:pos, t1:target, start:performance.now(), ms};
 }
 function viewPreset(name){
-  const s = 1;
   switch(name){
-    case 'top': return [new THREE.Vector3(0,175*s,8), new THREE.Vector3(0,0,0)];
-    case 'bottom': return [new THREE.Vector3(0,-175*s,8), new THREE.Vector3(0,0,0)];
+    case 'top': return [new THREE.Vector3(0,175,8), new THREE.Vector3(0,0,0)];
+    case 'bottom': return [new THREE.Vector3(0,-175,8), new THREE.Vector3(0,0,0)];
     case 'edge': return [new THREE.Vector3(140,8,40), new THREE.Vector3(0,0,10)];
     default: return [new THREE.Vector3(90,115,125), new THREE.Vector3(0,0,8)];
   }
@@ -646,7 +636,7 @@ function select(ref, opts={}){
   applyHighlight();
   renderInspector();
   document.querySelectorAll('#list .item').forEach(b=>b.setAttribute('aria-current', b.dataset.ref===ref));
-  const cur = document.querySelector(`#list .item[data-ref="${ref}"]`); if(cur && opts.fromList!==true) cur.scrollIntoView({block:'nearest'});
+  const cur = document.querySelector(`#list .item[data-ref="${ref}"]`); if(cur) cur.scrollIntoView({block:'nearest'});
 }
 
 function renderInspector(){
