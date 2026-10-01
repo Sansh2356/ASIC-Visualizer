@@ -602,7 +602,7 @@ function renderList(){
     });
     list.appendChild(sec);
   });
-  document.getElementById('partCount').textContent = PARTS.length + PASSIVES.filter(p=>p[1]!=='DNP').length;
+  document.getElementById('partCount').textContent = partCount();
 }
 
 function ensureVisibleFor(ref){
@@ -695,7 +695,7 @@ function overviewHTML(){
     <div><b>≈1.07 TH/s</b><span>at the 525 MHz default</span></div>
     <div><b>5 V · &gt;4 A</b><span>DC input, ~20 W</span></div>
     <div><b>1.15 V</b><span>default core rail (VDD)</span></div>
-    <div><b>${PARTS.length + PASSIVES.filter(p=>p[1]!=='DNP').length}</b><span>modelled parts</span></div>
+    <div><b>${partCount()}</b><span>populated parts</span></div>
   </div>
   <h3>Subsystems</h3>
   <dl class="kv">

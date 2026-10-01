@@ -25,7 +25,8 @@ const REPO = "https://github.com/bitaxeorg/bitaxeGamma";
 
 /* Main components. dims = [x-size, y-size, height] in KiCad orientation (before rotation).
    face = KiCad board direction ('+x','-x','+y','-y') of a one-sided feature: ESP32 antenna, plug openings.
-   Set it on any part whose model is not symmetric; rot only swaps the footprint's x/y size. */
+   Set it on any part whose model is not symmetric; rot only swaps the footprint's x/y size.
+   dnp = footprint left unpopulated; bom:false = copper-only footprint with no component. Neither is counted. */
 const PARTS = [
  { ref:"U8", name:"BM1370 mining ASIC", part:"Bitmain BM1370", pkg:"32-pad QFN-style, 2 exposed pads", group:"asic", side:"top", x:105.611, y:116.546, rot:180, dims:[8.6,7.8,1.0], mat:"asic", mark:"BM1370",
    what:"The chip that does the actual Bitcoin mining. It runs SHA-256 double hashing over block headers billions of times per second, searching for a nonce that produces a hash below the target.",
@@ -116,7 +117,7 @@ const PARTS = [
    nets:["5V","GND","GPIO39–42"],
    links:[["BAP readme",ESPM+"/blob/master/main/bap/bap_readme.md"]] },
 
- { ref:"J2", name:"Tag-Connect programming pads", part:"TC2030-IDC-NL footprint", pkg:"2 × 3 pads, 1.27 mm", group:"io", side:"top", x:128.13, y:57.73, rot:180, dims:[4,2.6,0.05], mat:"pads",
+ { ref:"J2", name:"Tag-Connect programming pads", part:"TC2030-IDC-NL footprint", pkg:"2 × 3 pads, 1.27 mm", group:"io", side:"top", x:128.13, y:57.73, rot:180, dims:[4,2.6,0.05], mat:"pads", bom:false,
    what:"A connector-less programming footprint. A spring-pin Tag-Connect cable presses onto these pads.",
    how:"Exposes EN, 3.3 V, UART0 TX/RX, GND and IO0, so an ESP-PROG can flash or recover the ESP32 even when USB is not usable.",
    specs:[["Signals","EN · 3V3 · U0TXD · GND · U0RXD · IO0"]],
@@ -138,12 +139,12 @@ const PARTS = [
    specs:[["Pins","GND · 5V · TACH · PWM"],["Fan","40 mm, 5 V, 4-pin PWM"]],
    nets:["GND","5V","FAN_TACH","FAN_PWM"] },
 
- { ref:"J7", name:"Alt. fan connector (JST-SH)", part:"JST BM04B-SRSS-TB", pkg:"4-pin 1.0 mm SH", group:"thermal", side:"top", x:103.5, y:143, rot:0, dims:[6,4.25,2.9], mat:"fanconn",
+ { ref:"J7", name:"Alt. fan connector (JST-SH)", part:"JST BM04B-SRSS-TB", pkg:"4-pin 1.0 mm SH", group:"thermal", side:"top", x:103.5, y:143, rot:0, dims:[6,4.25,2.9], mat:"fanconn", dnp:true,
    what:"An alternative small-pitch footprint for fans with JST-SH plugs.",
    how:"Wired in parallel with J6 (GND, 5 V, TACH, PWM). The BOM gives it no part number, so many boards leave it unpopulated.",
    specs:[["Pins","GND · 5V · TACH · PWM"],["Pitch","1.0 mm"]], nets:["GND","5V","FAN_TACH","FAN_PWM"] },
 
- { ref:"T1", name:"Analog-ground net tie", part:"Net-tie 0.25 mm", pkg:"copper bridge", group:"power", side:"bottom", x:90.825, y:77.85, rot:0, dims:[1,0.5,0.05], mat:"pads",
+ { ref:"T1", name:"Analog-ground net tie", part:"Net-tie 0.25 mm", pkg:"copper bridge", group:"power", side:"bottom", x:90.825, y:77.85, rot:0, dims:[1,0.5,0.05], mat:"pads", bom:false,
    what:"Joins the regulator's quiet analog ground (AGND) to the main ground at one chosen point.",
    how:"Keeping the small-signal ground of U2 separate, then tying it to power ground at a single spot, stops the large switching currents from disturbing U2's voltage measurements.",
    specs:[["Joins","AGND ↔ GND"]], nets:["AGND","GND"] },
@@ -229,6 +230,8 @@ const PASSIVES = [
  ["C52","0.1 µF","0402",97.56,137.64,180,"5V/GND","thermal","5 V decoupling near the fan connectors."],
  ["C53","0.1 µF","0402",97.2,140.73,-90,"5V/GND","thermal","5 V decoupling near the fan connectors."],
 ];
+/* Populated components: excludes DNP footprints and copper-only features (pads, net ties). */
+const partCount = () => PARTS.filter(p=>!p.dnp && p.bom!==false).length + PASSIVES.filter(p=>p[1]!=='DNP').length;
 const PKG = {"0402":[1,0.5,0.45],"0805":[2,1.25,1],"1206":[3.2,1.6,1.1],"1210":[3.2,2.5,2]};
 
 const TPS = [["TP1",82.39,70.94,"5V"],["TP2",82.31,62.1,"GND"],["TP3",101.98,91.23,"VDD"],["TP4",97.22,91.21,"GND"],["TP5",118.46,62.54,"ESP EN"],["TP6",122.43,62.54,"P_TX"],["TP7",122.42,58.83,"P_RX"],["TP8",123.61,84.12,"3V3"],["TP9",122.44,55.09,"IO0"],["TP10",118.48,55.14,"GND"],["TP11",118.48,58.69,"3V3"],["TP13",110.99,96.64,"RST_N"],["TP14",110.99,99.61,"CI"],["TP15",119.55,108.28,"RO"],["TP16",122.86,113.98,"BI"],["TP17",120.9,116.06,"ROSC_SEL"],["TP18",120.82,119.01,"LITE_PAD"],["TP19",114.86,134.28,"1V2"],["TP20",106.36,134.23,"0V8"],["TP21",122.86,121.97,"INV_CLKO"],["TP22",118.52,122.76,"CLKI"],["TP29",87.08,112.616,"NRSTO"],["TP30",89.89,114.52,"CO"],["TP31",87.08,115.554,"RI"],["TP32",89.89,117.31,"CLKO"],["TP33",87.08,118.492,"BO"],["TP34",89.86,120.48,"PIN_MODE"],["TP35",96.28,123.89,"TEMP_P"],["TP36",91.65,123.88,"TEMP_N"],["TP37",93.61,140.38,"FAN_TACH"],["TP38",90.3,140.41,"FAN_PWM"]];
@@ -265,7 +268,7 @@ const FLOWS = [
 /* Guided tour */
 const TOUR = [
  {t:"Meet the Bitaxe Gamma", side:"iso", refs:[], flows:[], cool:false,
-  p:["The Gamma is an open-source Bitcoin miner built around one BM1370 ASIC, the same chip used 195 times inside a Bitmain Antminer S21 Pro. On its own it hashes at roughly 1.1–1.2 TH/s from a 5 V supply, drawing around 20 W.",
+  p:["The Gamma is an open-source Bitcoin miner built around one BM1370 ASIC, the same chip used 195 times inside a Bitmain Antminer S21 Pro. On its own it hashes at about 1.07 TH/s at the default 525 MHz (around 1.2 TH/s when tuned) from a 5 V supply, drawing around 20 W.",
      "Everything here comes from the published KiCad design files. The top side carries the ESP32, the ASIC and the connectors. The bottom side carries the power stage. Use Next to follow how power, work and heat move through the board."]},
  {t:"Power enters at 5 V", side:"top", refs:["J1"], flows:["core"],
   p:["J1 is a 5.5 × 2.1 mm centre-positive barrel jack, and the board runs on 5 V DC only. The supply needs to deliver more than 4 A without sagging, which is why a 25–30 W adapter is recommended.",
