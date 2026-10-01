@@ -475,6 +475,8 @@ function frameRefs(refs, side){
 }
 
 /* highlight / dim */
+const _groupColors = {};
+function groupColor(k){ return _groupColors[k] || (_groupColors[k] = new THREE.Color(css(GROUPS[k]?.color || '--c-mech'))); }
 function applyHighlight(){
   const set = state.highlight; // array of refs or null
   const sel = state.selected;
@@ -485,17 +487,17 @@ function applyHighlight(){
       const mats = Array.isArray(m.material)? m.material : [m.material];
       mats.forEach(mt=>{
         if(mt.userData.orig===undefined){ mt.userData.orig = {opacity:mt.opacity, transparent:mt.transparent, color: mt.color? mt.color.clone():null, emissive: mt.emissive? mt.emissive.clone():null}; }
-        mt.transparent = !on || mt.userData.orig.transparent; mt.opacity = on ? mt.userData.orig.opacity : .12;
+        const transparent = !on || mt.userData.orig.transparent;
+        if(mt.transparent !== transparent){ mt.transparent = transparent; mt.needsUpdate = true; } // only this can change the shader
+        mt.opacity = on ? mt.userData.orig.opacity : .12;
         mt.depthWrite = on;
         if(mt.emissive){ if(ref===sel) mt.emissive.setHex(0x5a4410); else if(set && isSel) mt.emissive.setHex(0x1a1405); else mt.emissive.copy(mt.userData.orig.emissive); }
         if(mt.color && mt.userData.orig.color){
           if(state.colorBy && o.data.group){
             // passives take the colour of the subsystem they serve, not the generic "Passives" grey
-            const gcol = new THREE.Color(css(GROUPS[o.data.subgroup || o.data.group]?.color || '--c-mech'));
-            mt.color.copy(mt.userData.orig.color).lerp(gcol, .65);
+            mt.color.copy(mt.userData.orig.color).lerp(groupColor(o.data.subgroup || o.data.group), .65);
           } else mt.color.copy(mt.userData.orig.color);
         }
-        mt.needsUpdate = true;
       });
     });
   });
