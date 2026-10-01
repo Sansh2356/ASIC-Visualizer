@@ -204,9 +204,18 @@ function registerSimple(ref,name,group,side,x,y,dims,desc){
   return addObj(ref,data,side);
 }
 function rotDims(d,rot){ const r = ((rot%360)+360)%360; return (r===90||r===270) ? [d[1],d[0],d[2]] : [d[0],d[1],d[2]]; }
+// Direction a part's one-sided feature (antenna, plug opening) points. p.face is a KiCad board direction
+// ('+x','-x','+y','-y'); world X is mirrored (see toWorld), so KiCad ±x becomes ∓X in mesh space.
+function faceOf(p){
+  const f = p.face || '-x', isX = f[1]==='x', s = f[0]==='+' ? 1 : -1;
+  return {axis: isX ? 'x' : 'z', sign: isX ? -s : s};
+}
 
 function partMesh(p){
   const [w,l,h] = rotDims(p.dims,p.rot);
+  // a = distance along the face direction, c = across it
+  const F = faceOf(p), len = F.axis==='x' ? w : l, wid = F.axis==='x' ? l : w;
+  const xz = (a,c)=> F.axis==='x' ? [a,c] : [c,a];
   const grp = new THREE.Group();
   const add = (geo,mat,y,x=0,z=0)=>{ const m=new THREE.Mesh(geo,mat.clone()); m.position.set(x,y,z); m.castShadow=true; m.receiveShadow=true; grp.add(m); return m; };
   const topMatWithLabel = (base, text, opts)=>{
@@ -216,14 +225,18 @@ function partMesh(p){
   };
   switch(p.mat){
     case 'esp': {
-      const pcb = add(new THREE.BoxGeometry(w,0.8,l), new THREE.MeshStandardMaterial({color:0x1a1a1a,roughness:.6}), 0.4);
-      const shieldW = w-6.2; // antenna end at -X side (left in top view)
-      const can = new THREE.Mesh(new THREE.BoxGeometry(shieldW,2.3,l-1.2), topMatWithLabel(MATS.esp,"ESPRESSIF\nESP32-S3-WROOM-1\nN16R8",{bg:'#c4c8cc',fg:'#3b3f44',grain:true}));
-      can.position.set(3.1-0.0, 0.8+1.15, 0); can.castShadow=true; grp.add(can);
-      const ant = new THREE.Mesh(new THREE.PlaneGeometry(5.6,l-1), new THREE.MeshStandardMaterial({map:makeLabelTexture('',5.6,l-1,{bg:'#151515',draw:(g,c)=>{g.strokeStyle='#c9a24e';g.lineWidth=6;g.beginPath();let x=c.width*.25;g.moveTo(x,c.height*.1);for(let i=0;i<7;i++){g.lineTo(x,c.height*(.15+i*.1));x = x===c.width*.25?c.width*.75:c.width*.25;g.lineTo(x,c.height*(.15+i*.1));}g.stroke();}}),roughness:.6}));
-      ant.rotation.x=-Math.PI/2; ant.position.set(-w/2+3,0.81,0); grp.add(ant);
-      // castellated pads
-      for(let i=0;i<14;i++){ add(new THREE.BoxGeometry(0.9,0.85,0.5),MATS.pads,0.42,-w/2+6.5+i*1.27, l/2); add(new THREE.BoxGeometry(0.9,0.85,0.5),MATS.pads,0.42,-w/2+6.5+i*1.27,-l/2); }
+      add(new THREE.BoxGeometry(w,0.8,l), new THREE.MeshStandardMaterial({color:0x1a1a1a,roughness:.6}), 0.4);
+      // shield can covers everything except the 6.2 mm antenna end, which points along F
+      const [sw,sl] = xz(len-6.2, wid-1.2), [sx,sz] = xz(-F.sign*3.1, 0);
+      const can = new THREE.Mesh(new THREE.BoxGeometry(sw,2.3,sl), topMatWithLabel(MATS.esp,"ESPRESSIF\nESP32-S3-WROOM-1\nN16R8",{bg:'#c4c8cc',fg:'#3b3f44',grain:true}));
+      can.position.set(sx, 0.8+1.15, sz); can.castShadow=true; grp.add(can);
+      const ant = new THREE.Mesh(new THREE.PlaneGeometry(5.6,wid-1), new THREE.MeshStandardMaterial({map:makeLabelTexture('',5.6,wid-1,{bg:'#151515',draw:(g,c)=>{g.strokeStyle='#c9a24e';g.lineWidth=6;g.beginPath();let x=c.width*.25;g.moveTo(x,c.height*.1);for(let i=0;i<7;i++){g.lineTo(x,c.height*(.15+i*.1));x = x===c.width*.25?c.width*.75:c.width*.25;g.lineTo(x,c.height*(.15+i*.1));}g.stroke();}}),roughness:.6}));
+      const [ax,az] = xz(F.sign*(len/2-3), 0);
+      ant.rotation.set(-Math.PI/2, 0, F.axis==='x' ? 0 : Math.PI/2); ant.position.set(ax,0.81,az); grp.add(ant);
+      // castellated pads, counted from the antenna end
+      const [pw,pl] = xz(0.9,0.5);
+      for(let i=0;i<14;i++){ const a = F.sign*(len/2-6.5-i*1.27);
+        [1,-1].forEach(s=>{ const [px,pz] = xz(a, s*wid/2); add(new THREE.BoxGeometry(pw,0.85,pl),MATS.pads,0.42,px,pz); }); }
       break; }
     case 'asic': {
       add(new THREE.BoxGeometry(w,0.25,l), new THREE.MeshStandardMaterial({color:0x3a3326,roughness:.6}), 0.12);
@@ -239,10 +252,13 @@ function partMesh(p){
       break; }
     case 'jack': {
       add(new THREE.BoxGeometry(w,h,l), MATS.jack, h/2);
-      const bore = new THREE.Mesh(new THREE.CylinderGeometry(2.9,2.9,1,24), new THREE.MeshStandardMaterial({color:0x050505}));
-      bore.rotation.z=Math.PI/2; bore.position.set(w/2+0.01,h/2+0.5,0);
+      // plug opening and centre pin on the F end
+      const axial = g=> F.axis==='x' ? g.rotateZ(Math.PI/2) : g.rotateX(Math.PI/2);
+      const bore = new THREE.Mesh(axial(new THREE.CylinderGeometry(2.9,2.9,1,24)), new THREE.MeshStandardMaterial({color:0x050505}));
+      const [bx,bz] = xz(F.sign*(len/2+0.01), 0); bore.position.set(bx,h/2+0.5,bz);
       grp.add(bore);
-      add(new THREE.CylinderGeometry(1.05,1.05,1.2,16).rotateZ(Math.PI/2), MATS.term, h/2+0.5, w/2-0.2, 0);
+      const [cx,cz] = xz(F.sign*(len/2-0.2), 0);
+      add(axial(new THREE.CylinderGeometry(1.05,1.05,1.2,16)), MATS.term, h/2+0.5, cx, cz);
       break; }
     case 'header': {
       add(new THREE.BoxGeometry(w,2.5,l), MATS.header, 1.25);
@@ -264,7 +280,8 @@ function partMesh(p){
       break; }
     case 'metal': {
       const body = new THREE.Mesh(new THREE.BoxGeometry(w,h,l), MATS.metal.clone()); body.position.y=h/2; body.castShadow=true; grp.add(body);
-      if(p.ref==='J5'){ const mouth=new THREE.Mesh(new THREE.BoxGeometry(0.4,1.6,6.2), new THREE.MeshStandardMaterial({color:0x050505})); mouth.position.set(w/2+0.01,h/2,0); grp.add(mouth); }
+      if(p.ref==='J5'){ const [mw,ml] = xz(0.4,6.2), [mx,mz] = xz(F.sign*(len/2+0.01),0);
+        const mouth=new THREE.Mesh(new THREE.BoxGeometry(mw,1.6,ml), new THREE.MeshStandardMaterial({color:0x050505})); mouth.position.set(mx,h/2,mz); grp.add(mouth); }
       break; }
     default: { // ic
       const mats = topMatWithLabel(MATS.ic, p.mark||p.ref, {bg:'#1d1f22', fg:'#8e9499'});

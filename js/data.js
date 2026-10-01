@@ -23,7 +23,9 @@ const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).
 const ESPM = "https://github.com/bitaxeorg/ESP-Miner";
 const REPO = "https://github.com/bitaxeorg/bitaxeGamma";
 
-/* Main components. dims = [x-size, y-size, height] in KiCad orientation (before rotation). */
+/* Main components. dims = [x-size, y-size, height] in KiCad orientation (before rotation).
+   face = KiCad board direction ('+x','-x','+y','-y') of a one-sided feature: ESP32 antenna, plug openings.
+   Set it on any part whose model is not symmetric; rot only swaps the footprint's x/y size. */
 const PARTS = [
  { ref:"U8", name:"BM1370 mining ASIC", part:"Bitmain BM1370", pkg:"32-pad QFN-style, 2 exposed pads", group:"asic", side:"top", x:105.611, y:116.546, rot:180, dims:[8.6,7.8,1.0], mat:"asic", mark:"BM1370",
    what:"The chip that does the actual Bitcoin mining. It runs SHA-256 double hashing over block headers billions of times per second, searching for a nonce that produces a hash below the target.",
@@ -64,7 +66,7 @@ const PARTS = [
    specs:[["In → out","5 V → 0.8 V"],["Rated current","300 mA"]],
    nets:["5V","0V8"] },
 
- { ref:"U4", name:"ESP32-S3 controller", part:"Espressif ESP32-S3-WROOM-1-N16R8", pkg:"Module 18 × 25.5 mm, PCB antenna", group:"control", side:"top", x:117.43, y:72.61, rot:90, dims:[18,25.5,3.1], mat:"esp", mark:"ESP32-S3-WROOM-1",
+ { ref:"U4", name:"ESP32-S3 controller", part:"Espressif ESP32-S3-WROOM-1-N16R8", pkg:"Module 18 × 25.5 mm, PCB antenna", group:"control", side:"top", x:117.43, y:72.61, rot:90, dims:[18,25.5,3.1], face:"+x", mat:"esp", mark:"ESP32-S3-WROOM-1",
    what:"The brain of the miner. It runs the open-source ESP-Miner firmware and the AxeOS web dashboard, connects to Wi-Fi, speaks Stratum to your pool, and feeds work to the ASIC.",
    how:"It gets jobs from the pool, builds block-header work and sends it to the BM1370 over UART. When nonces come back it checks them against the pool difficulty and submits shares. It also runs the control loops: core voltage and frequency through U2, fan and temperature through U10, the OLED, the buttons, and overheat protection.",
    specs:[["CPU","Dual-core Xtensa LX7, up to 240 MHz"],["Memory","16 MB flash, 8 MB PSRAM (N16R8)"],["Radio","2.4 GHz Wi-Fi 802.11 b/g/n, Bluetooth LE"],["ASIC UART","GPIO17 TX → CI, GPIO18 RX ← RO"],["ASIC reset","GPIO1"],["I2C","GPIO47 SDA, GPIO48 SCL"],["VDD sense","GPIO2 (ADC1 ch1)"],["Native USB","GPIO19 D−, GPIO20 D+"],["Accessory","GPIO39–42"]],
@@ -89,13 +91,13 @@ const PARTS = [
    specs:[["I2C","0x4C"],["Temp input","ASIC TEMP_P/N (pins 20/21)"],["Fan","PWM out, TACH in"],["Supply","3.3 V"]],
    nets:["TEMP_DP/DN","FAN_PWM","FAN_TACH","SDA/SCL","3V3"] },
 
- { ref:"J1", name:"5 V DC barrel jack", part:"Tensility 54-00164", pkg:"5.5 × 2.1 mm, centre positive", group:"io", side:"top", x:84.58, y:66.62, rot:90, dims:[9,14,11], mat:"jack",
+ { ref:"J1", name:"5 V DC barrel jack", part:"Tensility 54-00164", pkg:"5.5 × 2.1 mm, centre positive", group:"io", side:"top", x:84.58, y:66.62, rot:90, dims:[9,14,11], face:"-x", mat:"jack",
    what:"Main power input. Everything on the board runs from this 5 V.",
    how:"5 V DC only; a higher voltage will damage the board. The supply must deliver more than 4 A (20 W) without sagging below 5 V. The project suggests a 25–30 W supply such as the Mean Well GST60A05-P1J. Bulk capacitors C3/C4 (47 µF) sit right at U2's input.",
    specs:[["Voltage","5 V DC only"],["Current","> 4 A recommended"],["Plug","5.5 × 2.1 mm (5.5 × 2.5 often fits)"],["Polarity","Centre positive"]],
    nets:["5V","GND"] },
 
- { ref:"J5", name:"USB-C port (data)", part:"GCT USB4105-GF-A", pkg:"USB-C receptacle, USB 2.0", group:"io", side:"top", x:80.865, y:83.26, rot:90, dims:[7.3,8.94,3.2], mat:"metal",
+ { ref:"J5", name:"USB-C port (data)", part:"GCT USB4105-GF-A", pkg:"USB-C receptacle, USB 2.0", group:"io", side:"top", x:80.865, y:83.26, rot:90, dims:[7.3,8.94,3.2], face:"-x", mat:"metal",
    what:"For flashing firmware and reading logs. It does not power the board.",
    how:"Only D+ and D− are wired, to the ESP32-S3's built-in USB Serial/JTAG on GPIO19/20. VBUS and the CC pins are not connected. Because there are no CC resistors, a USB-C-to-C cable from some hosts may not be detected; a USB-A-to-C cable avoids that.",
    specs:[["Data","USB 2.0 full speed → ESP32 native USB"],["VBUS","Not connected"],["CC1/CC2","Not connected"]],
