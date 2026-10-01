@@ -14,13 +14,15 @@ let state = {selected:null, mode:"free", tourIdx:0, explode:0, explodeTarget:0, 
 
 function toWorld(x,y){ return [-(x-EDGE.x0-BW/2), (y-EDGE.y0-BH/2)]; } // [X, Z] — mirrored so top view matches the physical board
 const SURF_T = BT/2, SURF_B = -BT/2;
+// seeded PRNG (mulberry32) so decorative texture detail is identical on every load
+function rng(seed){ return ()=>{ seed=(seed+0x6D2B79F5)|0; let t=Math.imul(seed^seed>>>15,1|seed); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
 
 function makeLabelTexture(text, w, h, opts={}){
   const c = document.createElement('canvas');
   const s = 16; c.width = Math.max(64, Math.round(w*s)); c.height = Math.max(32, Math.round(h*s));
   const g = c.getContext('2d');
   g.fillStyle = opts.bg || '#1b1d1f'; g.fillRect(0,0,c.width,c.height);
-  if(opts.grain){ for(let i=0;i<c.width*c.height/30;i++){ g.fillStyle=`rgba(255,255,255,${Math.random()*0.04})`; g.fillRect(Math.random()*c.width,Math.random()*c.height,1,1);} }
+  if(opts.grain){ const r = rng(c.width*31+c.height); for(let i=0;i<c.width*c.height/30;i++){ g.fillStyle=`rgba(255,255,255,${r()*0.04})`; g.fillRect(r()*c.width,r()*c.height,1,1);} }
   if(opts.draw) opts.draw(g,c);
   if(text){
     g.fillStyle = opts.fg || '#cfd4d2';
@@ -93,9 +95,10 @@ function boardTexture(side){
   const s = 12, c = document.createElement('canvas'); c.width = Math.round(BW*s); c.height = Math.round(BH*s);
   const g = c.getContext('2d');
   g.fillStyle = '#123d2a'; g.fillRect(0,0,c.width,c.height);
-  // subtle copper pour texture
+  // subtle copper pour texture (decorative, seeded so it is stable between loads)
+  const rand = rng(601);
   g.globalAlpha = .18; g.fillStyle = '#1f6a45';
-  for(let i=0;i<14;i++){ g.fillRect(Math.random()*c.width, Math.random()*c.height, 30+Math.random()*180, 20+Math.random()*120); }
+  for(let i=0;i<14;i++){ g.fillRect(rand()*c.width, rand()*c.height, 30+rand()*180, 20+rand()*120); }
   g.globalAlpha = 1;
   // pixel coords: top side is mirrored in X
   const P = (x,y)=>[ side==='top' ? (EDGE.x1-x)*s : (x-EDGE.x0)*s, (y-EDGE.y0)*s ];
@@ -129,9 +132,13 @@ function boardTexture(side){
     let [a,b]=P(105.4,145.5); g.fillText('bitaxeGamma · open source · bitaxe.org',a,b);
     [a,b]=P(99.2,55.2); g.fillText('5V GND 39 40 41 42',a,b);
   }
-  // vias
+  // vias: decorative stitching, not from KiCad. A fresh seeded stream per call gives both faces the same
+  // through-hole positions; vias that would land in or beside a mounting hole are skipped.
   g.fillStyle='rgba(216,179,90,.8)';
-  for(let i=0;i<220;i++){ const x = EDGE.x0+3+Math.random()*(BW-6), y = EDGE.y0+3+Math.random()*(BH-6); const [a,b]=P(x,y); g.beginPath(); g.arc(a,b,3,0,Math.PI*2); g.fill(); }
+  const vr = rng(1370);
+  for(let i=0;i<220;i++){ const x = EDGE.x0+3+vr()*(BW-6), y = EDGE.y0+3+vr()*(BH-6);
+    if(HOLES.some(([,hx,hy,d])=>Math.hypot(x-hx,y-hy) < d/2+2.2)) continue;
+    const [a,b]=P(x,y); g.beginPath(); g.arc(a,b,3,0,Math.PI*2); g.fill(); }
   // thermal via array under ASIC (real board has a dense via field)
   for(let i=-2;i<=2;i++) for(let j=-2;j<=2;j++){ const [a,b]=P(105.6+i*1.4,116.5+j*1.4); g.beginPath(); g.arc(a,b,5,0,Math.PI*2); g.fill(); }
   // ASIC pads gold on both sides
