@@ -13,10 +13,13 @@ serve the folder instead: `python3 -m http.server 8000` and open http://localhos
 - `js/data.js`: board data: PARTS, PASSIVES, test points, holes, BM1370 pins, FLOWS, TOUR steps
 - `js/app.js`: three.js scene, board/part models, picking, labels, inspector, guided tour, block diagram
 - `js/vendor/`: three.js r147 and OrbitControls (MIT licence)
+- `tools/check-data.js`: consistency checks for `js/data.js`
 
 ## Editing
 - To add or fix a component, edit its entry in `js/data.js`. Coordinates are KiCad millimetres from bitaxeGamma.kicad_pcb.
 - To change the tour, edit the `TOUR` array in `js/data.js`.
+- Give a part a `short` field to show a 3D label for it, and a `face` if its model has a one-sided feature (antenna, plug opening).
+- After editing data, run `node tools/check-data.js`. It catches duplicate refs, off-board coordinates, unknown tour refs/flows and similar mistakes.
 
 ## Sources
 - https://www.bitaxe.org/hardware
