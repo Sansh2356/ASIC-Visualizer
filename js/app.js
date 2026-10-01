@@ -7,7 +7,6 @@ const stage = document.getElementById('stage');
 const cv = document.getElementById('cv');
 let renderer, scene, camera, controls, raycaster, pointer;
 const objs = {};            // ref -> {group, meshes:[], data, side, base:{y}}
-const pickables = [];
 let boardMesh, boardGroup, coolGroup, oledGroup, tpGroup, flowGroup;
 const flowObjs = {};
 let state = {selected:null, mode:"free", tourIdx:0, explode:0, explodeTarget:0, highlight:null, colorBy:false};
@@ -81,7 +80,9 @@ function init(){
   buildBoard(); buildParts(); buildPassives(); buildTestPoints(); buildCooling(); buildOled(); buildFlows();
 
   raycaster = new THREE.Raycaster(); pointer = new THREE.Vector2();
-  cv.addEventListener('pointermove', onMove);
+  // hover picking is coalesced to one raycast per frame
+  let moveEvt = null;
+  cv.addEventListener('pointermove', e=>{ if(!moveEvt) requestAnimationFrame(()=>{ onMove(moveEvt); moveEvt = null; }); moveEvt = e; });
   cv.addEventListener('pointerdown', e=>{ downAt=[e.clientX,e.clientY]; });
   cv.addEventListener('pointerup', onClick);
   cv.addEventListener('pointerleave', ()=>{ tip.hidden = true; hoverRef=null; });
@@ -189,7 +190,7 @@ function buildBoard(){
       kind==='pad' ? "Plated 3 mm mounting hole tied to ground. Used to mount the board on a stand." :
       "3.5 mm hole, one of four on a ~41 mm square around the ASIC. Screws or springs through these clamp the 40 × 40 mm heatsink onto the chip.");
     const ring = new THREE.Mesh(new THREE.CylinderGeometry(d/2+0.05,d/2+0.05,BT+0.1,24,1,true), new THREE.MeshStandardMaterial({color:0xb8a060,metalness:.8,roughness:.35,side:THREE.DoubleSide}));
-    ring.position.set(X,0,Z); id.group.add(ring); id.meshes.push(ring); pickables.push(ring); ring.userData.ref=ref;
+    ring.position.set(X,0,Z); id.group.add(ring); id.meshes.push(ring); ring.userData.ref=ref;
   });
 }
 
@@ -306,7 +307,7 @@ function placeGroup(o, x, y, side, inner){
   if(side==='bottom') inner.rotation.x = Math.PI; // hang below board
   o.group.add(inner);
   o.baseY = o.group.position.y;
-  inner.traverse(m=>{ if(m.isMesh){ o.meshes.push(m); pickables.push(m); m.userData.ref=o.data.ref; } });
+  inner.traverse(m=>{ if(m.isMesh){ o.meshes.push(m); m.userData.ref=o.data.ref; } });
 }
 
 function buildParts(){
@@ -370,7 +371,7 @@ function buildCooling(){
   coolGroup.userData.hs = hs; coolGroup.userData.fan = fan;
   coolGroup.visible = false;
   const o = {group:coolGroup, meshes:[], data:{ref:'HS1', name:'Heatsink + 40 mm fan', group:'thermal', side:'top', simple:true, what:"A 40 × 40 mm aluminium heatsink sits directly on the ASIC with thermal paste and is clamped through the four 3.5 mm holes. A 40 mm 5 V 4-pin PWM fan mounts on top. The project suggests a good paste such as Thermal Grizzly Kryonaut and a quieter fan such as the Noctua NF-A4x10 5V PWM.", specs:[["Heatsink","40 × 40 mm aluminium"],["Fan","40 mm, 5 V, 4-pin PWM"],["Interface","Thermal paste on the chip"]]}, side:'top'};
-  coolGroup.traverse(m=>{ if(m.isMesh){ o.meshes.push(m); pickables.push(m); m.userData.ref='HS1'; } });
+  coolGroup.traverse(m=>{ if(m.isMesh){ o.meshes.push(m); m.userData.ref='HS1'; } });
   objs['HS1'] = o; o.baseY = SURF_T;
 }
 function buildOled(){
@@ -381,7 +382,7 @@ function buildOled(){
   const glass = new THREE.Mesh(new THREE.BoxGeometry(30,1.4,11.4), [0,0,0,0,0,0].map((_,i)=> i===2 ? new THREE.MeshStandardMaterial({map:makeLabelTexture('',30,11.4,{bg:'#05070a',draw:(g,c)=>{g.fillStyle='#57b7ff';g.font=`500 ${c.height*.17}px "IBM Plex Mono",monospace`;['Gh: 1206.1  J/Th: 14','A/R: 22985/59','UT: 2d 11h 53m','BD: 60.4M'].forEach((t,i)=>g.fillText(t,c.width*.06,c.height*(.24+i*.21)));}}),emissive:0x0d2a44,roughness:.2}) : new THREE.MeshStandardMaterial({color:0x111418,roughness:.2})));
   glass.position.set(-2.5,1.2,0); oledGroup.add(glass);
   const o = {group:oledGroup, meshes:[], data:{ref:'DSP1', name:'0.91" OLED module', group:'io', side:'top', simple:true, part:'SSD1306 128 × 32 I2C OLED', what:"The plug-in status display. It sits on the J3 header and shows hashrate, efficiency, shares, uptime and best difficulty. The firmware drives it at I2C address 0x3C. The values shown here are sample readings.", specs:[["Controller","SSD1306"],["Resolution","128 × 32"],["Bus","I2C 0x3C (3.3 V)"]]}, side:'top'};
-  oledGroup.traverse(m=>{ if(m.isMesh){ o.meshes.push(m); pickables.push(m); m.userData.ref='DSP1'; } });
+  oledGroup.traverse(m=>{ if(m.isMesh){ o.meshes.push(m); m.userData.ref='DSP1'; } });
   objs['DSP1']=o; o.baseY = oledGroup.position.y;
 }
 
@@ -418,11 +419,14 @@ function pick(e){
   const r = cv.getBoundingClientRect();
   pointer.x = ((e.clientX-r.left)/r.width)*2-1; pointer.y = -((e.clientY-r.top)/r.height)*2+1;
   raycaster.setFromCamera(pointer,camera);
-  const hits = raycaster.intersectObjects(pickables.filter(m=>isVisible(m)), false);
+  // visibility is only ever toggled per part group, so test the ~200 groups rather than walking every mesh
+  const cand = []; for(const ref in objs){ const o = objs[ref]; if(isVisible(o.group)) cand.push(...o.meshes); }
+  const hits = raycaster.intersectObjects(cand, false);
   return hits.length ? hits[0].object.userData.ref : null;
 }
 function isVisible(m){ let o=m; while(o){ if(!o.visible) return false; o=o.parent; } return true; }
 function onMove(e){
+  if(e.buttons){ tip.hidden = true; return; } // orbiting or panning: no hover feedback needed
   const ref = pick(e);
   hoverRef = ref;
   if(ref && objs[ref]){
