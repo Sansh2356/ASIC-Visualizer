@@ -490,7 +490,8 @@ function applyHighlight(){
         if(mt.emissive){ if(ref===sel) mt.emissive.setHex(0x5a4410); else if(set && isSel) mt.emissive.setHex(0x1a1405); else mt.emissive.copy(mt.userData.orig.emissive); }
         if(mt.color && mt.userData.orig.color){
           if(state.colorBy && o.data.group){
-            const gcol = new THREE.Color(css(GROUPS[o.data.group]?.color || '--c-mech'));
+            // passives take the colour of the subsystem they serve, not the generic "Passives" grey
+            const gcol = new THREE.Color(css(GROUPS[o.data.subgroup || o.data.group]?.color || '--c-mech'));
             mt.color.copy(mt.userData.orig.color).lerp(gcol, .65);
           } else mt.color.copy(mt.userData.orig.color);
         }
