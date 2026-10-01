@@ -413,7 +413,7 @@ function buildFlows(){
    INTERACTION
    ==================================================================== */
 const tip = document.getElementById('tip');
-let hoverRef = null, downAt = null;
+let hoverRef = null, downAt = null, downLabel = null; // downLabel: ref of the label a press started on
 function pick(e){
   const r = cv.getBoundingClientRect();
   pointer.x = ((e.clientX-r.left)/r.width)*2-1; pointer.y = -((e.clientY-r.top)/r.height)*2+1;
@@ -437,8 +437,9 @@ function onMove(e){
 }
 function onClick(e){
   if(!downAt) return; const moved = Math.hypot(e.clientX-downAt[0], e.clientY-downAt[1]); downAt=null;
+  const fromLabel = downLabel; downLabel = null;
   if(moved>5) return;
-  const ref = pick(e);
+  const ref = fromLabel || pick(e);
   if(ref) select(ref, {fly:true}); else if(state.mode==='free') select(null);
 }
 
@@ -510,7 +511,12 @@ function buildLabels(){
     const o = objs[ref]; if(!o) return;
     const el = document.createElement('div'); el.className='tag';
     el.innerHTML = `<b>${ref}</b> ${esc(short(o.data))}`;
-    el.addEventListener('click',()=>select(ref,{fly:true}));
+    // Forward input to the canvas so drags and zooms that start on a label still move the camera;
+    // onClick selects this label's part if the press turns out to be a click.
+    el.addEventListener('pointerdown', e=>{ cv.dispatchEvent(new PointerEvent('pointerdown', e)); downLabel = ref; });
+    el.addEventListener('pointerup', e=>cv.dispatchEvent(new PointerEvent('pointerup', e))); // only reached if capture failed
+    el.addEventListener('wheel', e=>{ e.preventDefault(); cv.dispatchEvent(new WheelEvent('wheel', e)); }, {passive:false});
+    el.addEventListener('contextmenu', e=>e.preventDefault()); // right-drag pans, like on the canvas
     labelsEl.appendChild(el); o.labelEl = el;
   });
 }
