@@ -13,6 +13,7 @@ let state = {selected:null, mode:"free", tourIdx:0, explode:0, explodeTarget:0, 
 
 function toWorld(x,y){ return [-(x-EDGE.x0-BW/2), (y-EDGE.y0-BH/2)]; } // [X, Z] — mirrored so top view matches the physical board
 const SURF_T = BT/2, SURF_B = -BT/2;
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 // seeded PRNG (mulberry32) so decorative texture detail is identical on every load
 function rng(seed){ return ()=>{ seed=(seed+0x6D2B79F5)|0; let t=Math.imul(seed^seed>>>15,1|seed); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
 
@@ -362,7 +363,7 @@ function buildCooling(){
   for(let i=0;i<9;i++){ const b=new THREE.Mesh(new THREE.BoxGeometry(11,0.6,5.5), bm); b.position.set(Math.cos(i/9*Math.PI*2)*12.5,0,Math.sin(i/9*Math.PI*2)*12.5); b.rotation.y=-i/9*Math.PI*2; b.rotation.x=.45; blades.add(b); }
   coolGroup.userData.hs = hs; coolGroup.userData.fan = fan;
   coolGroup.visible = false;
-  const o = {group:coolGroup, meshes:[], data:{ref:'HS1', name:'Heatsink + 40 mm fan', group:'thermal', side:'top', simple:true, what:"A 40 × 40 mm aluminium heatsink sits directly on the ASIC with thermal paste and is clamped through the four 3.5 mm holes. A 40 mm 5 V 4-pin PWM fan mounts on top. The project suggests a good paste such as Thermal Grizzly Kryonaut and a quieter fan such as the Noctua NF-A4x10 5V PWM.", specs:[["Heatsink","40 × 40 mm aluminium"],["Fan","40 mm, 5 V, 4-pin PWM"],["Interface","Thermal paste on the chip"]]}, side:'top'};
+  const o = {group:coolGroup, meshes:[], data:{ref:'HS1', short:'Cooler', name:'Heatsink + 40 mm fan', group:'thermal', side:'top', simple:true, what:"A 40 × 40 mm aluminium heatsink sits directly on the ASIC with thermal paste and is clamped through the four 3.5 mm holes. A 40 mm 5 V 4-pin PWM fan mounts on top. The project suggests a good paste such as Thermal Grizzly Kryonaut and a quieter fan such as the Noctua NF-A4x10 5V PWM.", specs:[["Heatsink","40 × 40 mm aluminium"],["Fan","40 mm, 5 V, 4-pin PWM"],["Interface","Thermal paste on the chip"]]}, side:'top'};
   coolGroup.traverse(m=>{ if(m.isMesh){ o.meshes.push(m); m.userData.ref='HS1'; } });
   objs['HS1'] = o; o.baseY = SURF_T;
 }
@@ -373,7 +374,7 @@ function buildOled(){
   const pcb = new THREE.Mesh(new THREE.BoxGeometry(38,1.2,12), new THREE.MeshStandardMaterial({color:0x1d4fa8,roughness:.6})); pcb.castShadow=true; oledGroup.add(pcb);
   const glass = new THREE.Mesh(new THREE.BoxGeometry(30,1.4,11.4), [0,0,0,0,0,0].map((_,i)=> i===2 ? new THREE.MeshStandardMaterial({map:makeLabelTexture('',30,11.4,{bg:'#05070a',draw:(g,c)=>{g.fillStyle='#57b7ff';g.font=`500 ${c.height*.17}px "IBM Plex Mono",monospace`;['Gh: 1206.1  J/Th: 14','A/R: 22985/59','UT: 2d 11h 53m','BD: 60.4M'].forEach((t,i)=>g.fillText(t,c.width*.06,c.height*(.24+i*.21)));}}),emissive:0x0d2a44,roughness:.2}) : new THREE.MeshStandardMaterial({color:0x111418,roughness:.2})));
   glass.position.set(-2.5,1.2,0); oledGroup.add(glass);
-  const o = {group:oledGroup, meshes:[], data:{ref:'DSP1', name:'0.91" OLED module', group:'io', side:'top', simple:true, part:'SSD1306 128 × 32 I2C OLED', what:"The plug-in status display. It sits on the J3 header and shows hashrate, efficiency, shares, uptime and best difficulty. The firmware drives it at I2C address 0x3C. The values shown here are sample readings.", specs:[["Controller","SSD1306"],["Resolution","128 × 32"],["Bus","I2C 0x3C (3.3 V)"]]}, side:'top'};
+  const o = {group:oledGroup, meshes:[], data:{ref:'DSP1', short:'OLED', name:'0.91" OLED module', group:'io', side:'top', simple:true, part:'SSD1306 128 × 32 I2C OLED', what:"The plug-in status display. It sits on the J3 header and shows hashrate, efficiency, shares, uptime and best difficulty. The firmware drives it at I2C address 0x3C. The values shown here are sample readings.", specs:[["Controller","SSD1306"],["Resolution","128 × 32"],["Bus","I2C 0x3C (3.3 V)"]]}, side:'top'};
   oledGroup.traverse(m=>{ if(m.isMesh){ o.meshes.push(m); m.userData.ref='DSP1'; } });
   objs['DSP1']=o; o.baseY = oledGroup.position.y;
 }
@@ -503,12 +504,12 @@ function applyHighlight(){
    LABELS (projected HTML)
    ==================================================================== */
 const labelsEl = document.getElementById('labels');
-const LABELED = ["U8","U4","U2","L1","U9","U10","U7","U3","U5","U6","J1","J5","J3","J4","J6","SW1","SW2","J2","HS1","DSP1"];
+const LABELED = [...PARTS.filter(p=>p.short).map(p=>p.ref), 'HS1', 'DSP1'];
 function buildLabels(){
   LABELED.forEach(ref=>{
     const o = objs[ref]; if(!o) return;
     const el = document.createElement('div'); el.className='tag';
-    el.innerHTML = `<b>${ref}</b> ${esc(short(o.data))}`;
+    el.innerHTML = `<b>${ref}</b> ${esc(o.data.short)}`;
     // Forward input to the canvas so drags and zooms that start on a label still move the camera;
     // onClick selects this label's part if the press turns out to be a click.
     el.addEventListener('pointerdown', e=>{ cv.dispatchEvent(new PointerEvent('pointerdown', e)); downLabel = ref; });
@@ -518,7 +519,6 @@ function buildLabels(){
     labelsEl.appendChild(el); o.labelEl = el;
   });
 }
-function short(d){ const m = {U8:"BM1370",U4:"ESP32-S3",U2:"TPS546D24A",L1:"300 nH",U9:"Level shift",U10:"EMC2101",U7:"25 MHz",U3:"3V3 LDO",U5:"1V2 LDO",U6:"0V8 LDO",J1:"5 V in",J5:"USB-C",J3:"OLED hdr",J4:"Accessory",J6:"Fan",SW1:"Reset",SW2:"Boot",J2:"Tag-Connect",HS1:"Cooler",DSP1:"OLED"}; return m[d.ref]||d.name; }
 const _v = new THREE.Vector3(), _box = new THREE.Box3();
 let labelAnchorsAt = NaN, labelGold = ''; // explode value the cached anchors were computed for
 // World point each label hangs from: above a top-side part, below a bottom-side one. Geometry only moves
@@ -682,8 +682,10 @@ function bindCalc(){
   const upd = ()=>{ const f = freqs[+fq.value]; document.getElementById('fqv').textContent = f+' MHz'; document.getElementById('hr').textContent = (f*2040/1e6).toFixed(3)+' TH/s'; document.getElementById('pll').textContent = '×'+(f/25).toFixed(1).replace(/\.0$/,''); };
   fq.addEventListener('input',upd); upd();
 }
+// signal colours live on FLOWS so the 3D flows, diagram and pinout always agree
+function flowColor(id){ return FLOWS.find(f=>f.id===id).color; }
 function pinoutSVG(){
-  const colors = {tap:'var(--c-power)',gnd:'var(--c-passive)',ctl:'var(--c-control)',clk:'#e0e36a',strap:'var(--muted)',io:'#ffc46b',temp:'var(--c-thermal)',chain:'var(--c-io)'};
+  const colors = {tap:'var(--c-power)',gnd:'var(--c-passive)',ctl:'var(--c-control)',clk:flowColor('clk'),strap:'var(--muted)',io:flowColor('rails'),temp:'var(--c-thermal)',chain:'var(--c-io)'};
   const W=340, H=330, bx=120, bw=100, by=20, bh=290;
   let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="BM1370 pinout">`;
   s += `<rect x="${bx}" y="${by}" width="${bw}" height="${bh}" rx="6" fill="var(--panel-2)" stroke="var(--line)"/>`;
@@ -699,7 +701,7 @@ function pinoutSVG(){
     s += `<text x="${left? x0-4 : x0+14}" y="${y+3.5}" text-anchor="${left?'end':'start'}" font-family="IBM Plex Mono" font-size="10" fill="var(--fg)">${n} ${name}</text>`;
   });
   s += `</svg>`;
-  s += `<p style="font-size:12px;color:var(--muted);margin-top:6px"><span style="color:var(--c-control)">■</span> control (CI/RO/reset/BI) · <span style="color:#e0e36a">■</span> clock · <span style="color:#ffc46b">■</span> I/O rails · <span style="color:var(--c-power)">■</span> domain taps · <span style="color:var(--c-thermal)">■</span> temp diode · <span style="color:var(--c-io)">■</span> chain outputs to the next chip (test points only on a single-chip board)</p>`;
+  s += `<p style="font-size:12px;color:var(--muted);margin-top:6px"><span style="color:var(--c-control)">■</span> control (CI/RO/reset/BI) · <span style="color:${colors.clk}">■</span> clock · <span style="color:${colors.io}">■</span> I/O rails · <span style="color:var(--c-power)">■</span> domain taps · <span style="color:var(--c-thermal)">■</span> temp diode · <span style="color:var(--c-io)">■</span> chain outputs to the next chip (test points only on a single-chip board)</p>`;
   return s;
 }
 
@@ -832,7 +834,7 @@ function setPane(p){
 function diagramSVG(){
   const B = (ref,x,y,w,h,title,sub,col)=>`<g class="blk" data-ref="${ref}" tabindex="0" role="button" aria-label="${title}: ${sub}"><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="6" style="stroke:${col}"/><text x="${x+12}" y="${y+22}" font-weight="600">${title}</text><text class="sub" x="${x+12}" y="${y+40}">${sub}</text></g>`;
   const W = (d,col,label,lx,ly,dash)=>`<path d="${d}" fill="none" stroke="${col}" stroke-width="2" ${dash?'stroke-dasharray="5 4"':''} marker-end="url(#ar${col.slice(1)})"/>${label?`<text class="wl" x="${lx}" y="${ly}" fill="${col}">${label}</text>`:''}`;
-  const P='#ff8a3d', Y='#ffc46b', C='#4cc9e0', I='#a98bff', T='#ff5d73', K='#e0e36a', G='#7ce0a0';
+  const P=flowColor('core'), Y=flowColor('rails'), C=flowColor('uart'), I=flowColor('i2c'), T=flowColor('thermal'), K=flowColor('clk'), G=flowColor('usb');
   return `<svg viewBox="0 0 1100 640" role="img" aria-label="Bitaxe Gamma block diagram">
   <defs>${[P,Y,C,I,T,K,G].map(c=>`<marker id="ar${c.slice(1)}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="${c}"/></marker>`).join('')}</defs>
   <text class="cap" x="20" y="28">POWER</text><text class="cap" x="420" y="28">HASHING</text><text class="cap" x="780" y="28">CONTROL &amp; I/O</text>

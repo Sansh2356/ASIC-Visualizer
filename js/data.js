@@ -18,7 +18,6 @@ const GROUPS = {
   test:    {name:"Test points",          color:"--c-test"},
   mech:    {name:"Board & mechanics",    color:"--c-mech"},
 };
-const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 
 const ESPM = "https://github.com/bitaxeorg/ESP-Miner";
 const REPO = "https://github.com/bitaxeorg/bitaxeGamma";
@@ -26,9 +25,10 @@ const REPO = "https://github.com/bitaxeorg/bitaxeGamma";
 /* Main components. dims = [x-size, y-size, height] in KiCad orientation (before rotation).
    face = KiCad board direction ('+x','-x','+y','-y') of a one-sided feature: ESP32 antenna, plug openings.
    Set it on any part whose model is not symmetric; rot only swaps the footprint's x/y size.
+   short = text for the part's 3D label; only parts with one get a label.
    dnp = footprint left unpopulated; bom:false = copper-only footprint with no component. Neither is counted. */
 const PARTS = [
- { ref:"U8", name:"BM1370 mining ASIC", part:"Bitmain BM1370", pkg:"32-pad QFN-style, 2 exposed pads", group:"asic", side:"top", x:105.611, y:116.546, rot:180, dims:[8.6,7.8,1.0], mat:"asic", mark:"BM1370",
+ { ref:"U8", short:"BM1370", name:"BM1370 mining ASIC", part:"Bitmain BM1370", pkg:"32-pad QFN-style, 2 exposed pads", group:"asic", side:"top", x:105.611, y:116.546, rot:180, dims:[8.6,7.8,1.0], mat:"asic", mark:"BM1370",
    what:"The chip that does the actual Bitcoin mining. It runs SHA-256 double hashing over block headers billions of times per second, searching for a nonce that produces a hash below the target.",
    how:"It comes from Bitmain's Antminer S21 Pro (3 hashboards × 65 chips = 195 chips, 234 TH/s nominal). The Gamma runs one of those chips by itself. ESP-Miner treats it as 128 cores split into 2040 small cores across 4 hash domains, and each small core tests roughly one nonce per clock. Hashrate is therefore about frequency × 2040: 525 MHz gives ≈1.07 TH/s. Version rolling (ASICBoost) is done in hardware.",
    specs:[["Origin","Antminer S21 Pro (Bitmain)"],["Chip ID","0x1370"],["Cores","128 cores / 2040 small cores"],["Hash domains","4"],["Default clock","525 MHz (options 400–690)"],["Default core V","1150 mV (options 1000–1250)"],["Bitmain efficiency claim","15 J/TH"],["UART","115200 baud at boot → 1 Mbaud"],["ASIC difficulty","256"],["Throttle","> 75 °C → overheat mode"]],
@@ -36,104 +36,104 @@ const PARTS = [
    note:"Not open source and not sold individually when the Gamma launched; boards are built with chips pulled from S21 Pro hashboards. Its footprint and pinout differ from the BM1368/1366/1397 used in earlier Bitaxes.",
    links:[["BM1370 driver (ESP-Miner)",ESPM+"/blob/master/components/asic/bm1370.c"]] },
 
- { ref:"U2", name:"Core voltage regulator", part:"TI TPS546D24ARVFR", pkg:"40-pin LQFN-CLIP", group:"power", side:"bottom", x:93.58, y:77.59, rot:90, dims:[7,5,1.5], mat:"ic", mark:"TPS546D24A",
+ { ref:"U2", short:"TPS546D24A", name:"Core voltage regulator", part:"TI TPS546D24ARVFR", pkg:"40-pin LQFN-CLIP", group:"power", side:"bottom", x:93.58, y:77.59, rot:90, dims:[7,5,1.5], mat:"ic", mark:"TPS546D24A",
    what:"A digitally controlled synchronous buck converter that turns the 5 V input into the ASIC's ~1.15 V core rail (VDD), which can draw well over 15 A.",
    how:"It switches 5 V through the inductor L1 at 650 kHz. The ESP32 talks to it over PMBus (I2C address 0x24) to set the output voltage and to read back input voltage, output current and its own temperature. Those readings become the power figure in AxeOS. Its remote-sense pins (VOSNS/GOSNS through R14/R13) measure the voltage at the load, so the ASIC gets an accurate rail.",
    specs:[["Input","4.5–5.5 V (board 5 V rail)"],["Output","VDD ≈ 1.0–1.25 V, 1.15 V default"],["Switching","650 kHz (firmware default)"],["I2C / PMBus","0x24"],["VIN on / off","4.8 V / 4.5 V"],["VIN OV fault","6.5 V"],["IOUT warn / fault","25 A / 30 A"],["Thermal throttle","> 105 °C"],["Status lines","PGOOD → GPIO11, SMB_ALRT → GPIO13"]],
    nets:["5V","SW","VDD (via L1)","SDA/SCL","PGOOD","SMB_ALRT","AGND (net-tie T1)"],
    links:[["TPS546 driver",ESPM+"/blob/master/main/power/TPS546.c"]] },
 
- { ref:"L1", name:"Buck output inductor", part:"Coilcraft SLC1175-301MEC (300 nH)", pkg:"SLC1175 flat-wire SMD", group:"power", side:"bottom", x:100.27, y:85.255, rot:0, dims:[11,7.6,5.2], mat:"inductor", mark:"R30",
+ { ref:"L1", short:"300 nH", name:"Buck output inductor", part:"Coilcraft SLC1175-301MEC (300 nH)", pkg:"SLC1175 flat-wire SMD", group:"power", side:"bottom", x:100.27, y:85.255, rot:0, dims:[11,7.6,5.2], mat:"inductor", mark:"R30",
    what:"Stores energy every switching cycle and smooths the chopped 5 V square wave from U2 into steady DC current for the ASIC.",
    how:"U2's switch node (SW) drives one end; the other end is the VDD rail. A low inductance (300 nH) with a flat-wire winding keeps resistance low, which matters at 15–20 A.",
    specs:[["Inductance","300 nH"],["Between","SW node → VDD"],["BOM note","Footprint named SLC1175-271; BOM part is -301"]],
    nets:["SW","VDD"] },
 
- { ref:"U3", name:"3.3 V regulator", part:"Richtek RT9080-33GJ5", pkg:"TSOT-23-5", group:"power", side:"bottom", x:112.563, y:63.38, rot:0, dims:[2.9,1.6,1], mat:"ic",
+ { ref:"U3", short:"3V3 LDO", name:"3.3 V regulator", part:"Richtek RT9080-33GJ5", pkg:"TSOT-23-5", group:"power", side:"bottom", x:112.563, y:63.38, rot:0, dims:[2.9,1.6,1], mat:"ic",
    what:"Low-dropout linear regulator making the 3.3 V logic rail from 5 V.",
    how:"Feeds the ESP32-S3 module, the EMC2101 fan controller, the OLED, the 3.3 V side of the level shifter, and the I2C/PGOOD pull-ups.",
    specs:[["In → out","5 V → 3.3 V"],["Rated current","600 mA"],["Type","LDO, low quiescent current"]],
    nets:["5V","3V3","GND"] },
 
- { ref:"U5", name:"1.2 V I/O regulator", part:"Microchip MCP1824T-1202E/OT", pkg:"SOT-23-5", group:"power", side:"bottom", x:110.981, y:130.229, rot:0, dims:[2.9,1.6,1.1], mat:"ic",
+ { ref:"U5", short:"1V2 LDO", name:"1.2 V I/O regulator", part:"Microchip MCP1824T-1202E/OT", pkg:"SOT-23-5", group:"power", side:"bottom", x:110.981, y:130.229, rot:0, dims:[2.9,1.6,1.1], mat:"ic",
    what:"LDO making the 1.2 V rail for the ASIC's I/O ring.",
    how:"Supplies BM1370 VDDIO_12, the 25 MHz oscillator U7, and the 1.2 V side of the level shifter U9. Its power-good pin is unused.",
    specs:[["In → out","5 V → 1.2 V"],["Rated current","300 mA"]],
    nets:["5V","1V2"] },
 
- { ref:"U6", name:"0.8 V I/O regulator", part:"Microchip MCP1824T-0802E/OT", pkg:"SOT-23-5", group:"power", side:"bottom", x:102.53, y:130.47, rot:0, dims:[2.9,1.6,1.1], mat:"ic",
+ { ref:"U6", short:"0V8 LDO", name:"0.8 V I/O regulator", part:"Microchip MCP1824T-0802E/OT", pkg:"SOT-23-5", group:"power", side:"bottom", x:102.53, y:130.47, rot:0, dims:[2.9,1.6,1.1], mat:"ic",
    what:"LDO making the 0.8 V rail for the ASIC's second I/O supply.",
    how:"Feeds BM1370 VDDIO_08 (pin 14). Two separate small rails (1.2 V and 0.8 V) keep the chip's I/O supplies clean and independent of the noisy, high-current core rail.",
    specs:[["In → out","5 V → 0.8 V"],["Rated current","300 mA"]],
    nets:["5V","0V8"] },
 
- { ref:"U4", name:"ESP32-S3 controller", part:"Espressif ESP32-S3-WROOM-1-N16R8", pkg:"Module 18 × 25.5 mm, PCB antenna", group:"control", side:"top", x:117.43, y:72.61, rot:90, dims:[18,25.5,3.1], face:"+x", mat:"esp", mark:"ESP32-S3-WROOM-1",
+ { ref:"U4", short:"ESP32-S3", name:"ESP32-S3 controller", part:"Espressif ESP32-S3-WROOM-1-N16R8", pkg:"Module 18 × 25.5 mm, PCB antenna", group:"control", side:"top", x:117.43, y:72.61, rot:90, dims:[18,25.5,3.1], face:"+x", mat:"esp", mark:"ESP32-S3-WROOM-1",
    what:"The brain of the miner. It runs the open-source ESP-Miner firmware and the AxeOS web dashboard, connects to Wi-Fi, speaks Stratum to your pool, and feeds work to the ASIC.",
    how:"It gets jobs from the pool, builds block-header work and sends it to the BM1370 over UART. When nonces come back it checks them against the pool difficulty and submits shares. It also runs the control loops: core voltage and frequency through U2, fan and temperature through U10, the OLED, the buttons, and overheat protection.",
    specs:[["CPU","Dual-core Xtensa LX7, up to 240 MHz"],["Memory","16 MB flash, 8 MB PSRAM (N16R8)"],["Radio","2.4 GHz Wi-Fi 802.11 b/g/n, Bluetooth LE"],["ASIC UART","GPIO17 TX → CI, GPIO18 RX ← RO"],["ASIC reset","GPIO1"],["I2C","GPIO47 SDA, GPIO48 SCL"],["VDD sense","GPIO2 (ADC1 ch1)"],["Native USB","GPIO19 D−, GPIO20 D+"],["Accessory","GPIO39–42"]],
    nets:["3V3","TX/RX","RST","SDA/SCL","PGOOD","SMB_ALRT","USB D+/D−","EN","IO0"],
    links:[["ESP-Miner firmware",ESPM],["Web flasher","https://bitaxeorg.github.io/bitaxe-web-flasher/"]] },
 
- { ref:"U9", name:"Logic level shifter", part:"TI SN74AVC4T774PWR", pkg:"TSSOP-16", group:"control", side:"bottom", x:118.29, y:100.13, rot:0, dims:[5,4.4,1.1], mat:"ic", mark:"AVC4T774",
+ { ref:"U9", short:"Level shift", name:"Logic level shifter", part:"TI SN74AVC4T774PWR", pkg:"TSSOP-16", group:"control", side:"bottom", x:118.29, y:100.13, rot:0, dims:[5,4.4,1.1], mat:"ic", mark:"AVC4T774",
    what:"Translates signals between the ESP32's 3.3 V logic and the ASIC's 1.2 V I/O. Without it the ESP32 would overdrive the ASIC pins and could not reliably read the ASIC's replies.",
    how:"It is a 4-bit dual-supply transceiver with per-channel direction control. Three channels are used: ESP TX → ASIC CI (commands and jobs), ASIC RO → ESP RX (responses and nonces), and ESP GPIO1 → ASIC NRSTI (reset). The fourth channel is unused. OE is held low by R21 (20 kΩ), so it is always enabled.",
    specs:[["A side","3.3 V (ESP32)"],["B side","1.2 V (ASIC)"],["Channels used","3 of 4"],["OE","R21 20 kΩ to GND"]],
    nets:["TX→CI","RO→RX","RST→RST_N","3V3","1V2"] },
 
- { ref:"U7", name:"25 MHz oscillator", part:"SX3M25.000E20F30THN", pkg:"3.2 × 2.5 mm SMD", group:"asic", side:"bottom", x:114.73, y:125.22, rot:90, dims:[3.2,2.5,0.9], mat:"metal",
+ { ref:"U7", short:"25 MHz", name:"25 MHz oscillator", part:"SX3M25.000E20F30THN", pkg:"3.2 × 2.5 mm SMD", group:"asic", side:"bottom", x:114.73, y:125.22, rot:90, dims:[3.2,2.5,0.9], mat:"metal",
    what:"The reference clock for the ASIC.",
    how:"Runs from the 1.2 V rail and drives BM1370 CLKI. Inside the ASIC a PLL multiplies the 25 MHz reference up to the hashing clock (for example 21 × 25 MHz = 525 MHz). The firmware sets the PLL dividers when you change frequency in AxeOS.",
    specs:[["Frequency","25 MHz"],["Supply","1.2 V"],["Drives","CLKI (ASIC pin 8)"]],
    nets:["1V2","CLKI"] },
 
- { ref:"U10", name:"Fan controller + temp sensor", part:"Microchip EMC2101-R-ACZL", pkg:"MSOP-8", group:"thermal", side:"bottom", x:93.895, y:129.99, rot:-90, dims:[3,3,1], mat:"ic",
+ { ref:"U10", short:"EMC2101", name:"Fan controller + temp sensor", part:"Microchip EMC2101-R-ACZL", pkg:"MSOP-8", group:"thermal", side:"bottom", x:93.895, y:129.99, rot:-90, dims:[3,3,1], mat:"ic",
    what:"Reads the ASIC's on-die temperature diode and drives the cooling fan.",
    how:"Its remote-diode inputs connect to BM1370 TEMP_P/TEMP_N through 100 Ω resistors (R22, R23) with a 470 pF filter capacitor (C50). It outputs PWM to the fan and counts tachometer pulses to report RPM. The ESP32 reads it over I2C. Firmware applies a diode ideality setting of 0x24 for this chip.",
    specs:[["I2C","0x4C"],["Temp input","ASIC TEMP_P/N (pins 20/21)"],["Fan","PWM out, TACH in"],["Supply","3.3 V"]],
    nets:["TEMP_DP/DN","FAN_PWM","FAN_TACH","SDA/SCL","3V3"] },
 
- { ref:"J1", name:"5 V DC barrel jack", part:"Tensility 54-00164", pkg:"5.5 × 2.1 mm, centre positive", group:"io", side:"top", x:84.58, y:66.62, rot:90, dims:[9,14,11], face:"-x", mat:"jack",
+ { ref:"J1", short:"5 V in", name:"5 V DC barrel jack", part:"Tensility 54-00164", pkg:"5.5 × 2.1 mm, centre positive", group:"io", side:"top", x:84.58, y:66.62, rot:90, dims:[9,14,11], face:"-x", mat:"jack",
    what:"Main power input. Everything on the board runs from this 5 V.",
    how:"5 V DC only; a higher voltage will damage the board. The supply must deliver more than 4 A (20 W) without sagging below 5 V. The project suggests a 25–30 W supply such as the Mean Well GST60A05-P1J. Bulk capacitors C3/C4 (47 µF) sit right at U2's input.",
    specs:[["Voltage","5 V DC only"],["Current","> 4 A recommended"],["Plug","5.5 × 2.1 mm (5.5 × 2.5 often fits)"],["Polarity","Centre positive"]],
    nets:["5V","GND"] },
 
- { ref:"J5", name:"USB-C port (data)", part:"GCT USB4105-GF-A", pkg:"USB-C receptacle, USB 2.0", group:"io", side:"top", x:80.865, y:83.26, rot:90, dims:[7.3,8.94,3.2], face:"-x", mat:"metal",
+ { ref:"J5", short:"USB-C", name:"USB-C port (data)", part:"GCT USB4105-GF-A", pkg:"USB-C receptacle, USB 2.0", group:"io", side:"top", x:80.865, y:83.26, rot:90, dims:[7.3,8.94,3.2], face:"-x", mat:"metal",
    what:"For flashing firmware and reading logs. It does not power the board.",
    how:"Only D+ and D− are wired, to the ESP32-S3's built-in USB Serial/JTAG on GPIO19/20. VBUS and the CC pins are not connected. Because there are no CC resistors, a USB-C-to-C cable from some hosts may not be detected; a USB-A-to-C cable avoids that.",
    specs:[["Data","USB 2.0 full speed → ESP32 native USB"],["VBUS","Not connected"],["CC1/CC2","Not connected"]],
    nets:["USB_D+","USB_D−","GND"] },
 
- { ref:"J3", name:"OLED display header", part:"4-pin 2.54 mm header", pkg:"1 × 4", group:"io", side:"top", x:87.205, y:50.292, rot:180, dims:[10.16,2.54,8.5], mat:"header",
+ { ref:"J3", short:"OLED hdr", name:"OLED display header", part:"4-pin 2.54 mm header", pkg:"1 × 4", group:"io", side:"top", x:87.205, y:50.292, rot:180, dims:[10.16,2.54,8.5], mat:"header",
    what:"Plugs in a 0.91\" SSD1306 128 × 32 I2C OLED that shows hashrate, efficiency, IP address and status.",
    how:"Pinout GND, VCC (3.3 V), SCL, SDA, silkscreened next to the header. It shares the I2C bus with U2 and U10. The display sits at address 0x3C.",
    specs:[["Display","SSD1306 128×32, 0.91\""],["I2C","0x3C"],["Pins","GND · VCC · SCL · SDA"]],
    nets:["GND","3V3","SCL","SDA"] },
 
- { ref:"J4", name:"Accessory port", part:"6-pin 2.54 mm header", pkg:"1 × 6", group:"io", side:"bottom", x:99.1715, y:51.054, rot:90, dims:[2.54,15.24,2.5], mat:"header",
+ { ref:"J4", short:"Accessory", name:"Accessory port", part:"6-pin 2.54 mm header", pkg:"1 × 6", group:"io", side:"bottom", x:99.1715, y:51.054, rot:90, dims:[2.54,15.24,2.5], mat:"header",
    what:"An expansion header for add-ons.",
    how:"Carries 5 V, GND and ESP32 GPIO39–42, which are also the ESP32's JTAG pins. Current ESP-Miner uses GPIO39/40 as a UART for BAP, the Bitaxe Accessory Protocol, so external displays or controllers can read stats and change settings.",
    specs:[["Pin 1–2","5 V, GND"],["Pin 3–6","GPIO39, 40, 41, 42"],["Protocol","BAP UART (TX 39 / RX 40)"]],
    nets:["5V","GND","GPIO39–42"],
    links:[["BAP readme",ESPM+"/blob/master/main/bap/bap_readme.md"]] },
 
- { ref:"J2", name:"Tag-Connect programming pads", part:"TC2030-IDC-NL footprint", pkg:"2 × 3 pads, 1.27 mm", group:"io", side:"top", x:128.13, y:57.73, rot:180, dims:[4,2.6,0.05], mat:"pads", bom:false,
+ { ref:"J2", short:"Tag-Connect", name:"Tag-Connect programming pads", part:"TC2030-IDC-NL footprint", pkg:"2 × 3 pads, 1.27 mm", group:"io", side:"top", x:128.13, y:57.73, rot:180, dims:[4,2.6,0.05], mat:"pads", bom:false,
    what:"A connector-less programming footprint. A spring-pin Tag-Connect cable presses onto these pads.",
    how:"Exposes EN, 3.3 V, UART0 TX/RX, GND and IO0, so an ESP-PROG can flash or recover the ESP32 even when USB is not usable.",
    specs:[["Signals","EN · 3V3 · U0TXD · GND · U0RXD · IO0"]],
    nets:["EN","3V3","P_TX","P_RX","IO0"] },
 
- { ref:"SW1", name:"RESET button", part:"CS1213AGF260", pkg:"SMD tact switch", group:"io", side:"top", x:130.186, y:104.448, rot:180, dims:[3.6,3,1.6], mat:"button",
+ { ref:"SW1", short:"Reset", name:"RESET button", part:"CS1213AGF260", pkg:"SMD tact switch", group:"io", side:"top", x:130.186, y:104.448, rot:180, dims:[3.6,3,1.6], mat:"button",
    what:"Restarts the ESP32.",
    how:"Pulls the ESP32's EN pin to ground. EN normally rises through R16 (10 kΩ) and C22 (1 µF), which also gives a clean power-on reset delay.",
    specs:[["Signal","EN"]], nets:["EN","GND"] },
 
- { ref:"SW2", name:"BOOT button", part:"CS1213AGF260", pkg:"SMD tact switch", group:"io", side:"top", x:130.082, y:113.155, rot:180, dims:[3.6,3,1.6], mat:"button",
+ { ref:"SW2", short:"Boot", name:"BOOT button", part:"CS1213AGF260", pkg:"SMD tact switch", group:"io", side:"top", x:130.082, y:113.155, rot:180, dims:[3.6,3,1.6], mat:"button",
    what:"Holds GPIO0 low. Hold it while pressing RESET to enter the ESP32 ROM bootloader for recovery flashing.",
    how:"While running, ESP-Miner also reads this button as user input, for example to cycle display screens or, held at boot, to restore settings.",
    specs:[["Signal","GPIO0 (strapping pin)"]], nets:["IO0","GND"] },
 
- { ref:"J6", name:"Fan connector (4-pin)", part:"Molex 0470531000", pkg:"4-pin 2.54 mm", group:"thermal", side:"top", x:89.621, y:143.622, rot:0, dims:[10.2,5.8,6], mat:"fanconn",
+ { ref:"J6", short:"Fan", name:"Fan connector (4-pin)", part:"Molex 0470531000", pkg:"4-pin 2.54 mm", group:"thermal", side:"top", x:89.621, y:143.622, rot:0, dims:[10.2,5.8,6], mat:"fanconn",
    what:"Standard 4-pin PWM fan header. Active cooling is required; the heatsink alone is not enough.",
    how:"Pins: GND, 5 V, TACH, PWM. Use a 5 V PWM fan. A 12 V fan will spin too slowly and the board will overheat. The project suggests the Noctua NF-A4x10 5V PWM for quieter running. R25 pulls PWM high so the fan runs at full speed if the controller is not driving it.",
    specs:[["Pins","GND · 5V · TACH · PWM"],["Fan","40 mm, 5 V, 4-pin PWM"]],
