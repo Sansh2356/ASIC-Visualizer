@@ -124,7 +124,9 @@ main.stage{position:relative;min-width:0;min-height:0;overflow:hidden}
 #diagram svg{display:block;width:100%;min-width:760px;max-width:1150px;margin:0 auto;height:auto}
 #diagram .blk{cursor:pointer}
 #diagram .blk rect{fill:var(--panel);stroke:var(--line);stroke-width:1.2}
-#diagram .blk:hover rect{stroke:var(--gold)}
+#diagram .blk:hover rect,#diagram .blk:focus-visible rect{stroke:var(--gold)}
+#diagram .blk:focus-visible{outline:none}
+#diagram .blk:focus-visible rect{stroke-width:2.5}
 #diagram text{fill:var(--fg);font-family:var(--f-body);font-size:13px}
 #diagram .sub{fill:var(--muted);font-family:var(--f-mono);font-size:10.5px}
 #diagram .wl{font-family:var(--f-mono);font-size:10px}

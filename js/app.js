@@ -807,10 +807,14 @@ function setPane(p){
   document.getElementById('vDiag').setAttribute('aria-pressed', p==='diag');
   const d = document.getElementById('diagram'); d.hidden = p!=='diag';
   if(p==='diag' && !d.dataset.built){ d.innerHTML = diagramSVG(); d.dataset.built='1';
-    d.querySelectorAll('.blk').forEach(b=> b.addEventListener('click',()=>{ setPane('board'); select(b.dataset.ref,{fly:true}); })); }
+    d.querySelectorAll('.blk').forEach(b=>{
+      const open = ()=>{ setPane('board'); select(b.dataset.ref,{fly:true}); };
+      b.addEventListener('click',open);
+      b.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); open(); } });
+    }); }
 }
 function diagramSVG(){
-  const B = (ref,x,y,w,h,title,sub,col)=>`<g class="blk" data-ref="${ref}" tabindex="0"><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="6" style="stroke:${col}"/><text x="${x+12}" y="${y+22}" font-weight="600">${title}</text><text class="sub" x="${x+12}" y="${y+40}">${sub}</text></g>`;
+  const B = (ref,x,y,w,h,title,sub,col)=>`<g class="blk" data-ref="${ref}" tabindex="0" role="button" aria-label="${title}: ${sub}"><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="6" style="stroke:${col}"/><text x="${x+12}" y="${y+22}" font-weight="600">${title}</text><text class="sub" x="${x+12}" y="${y+40}">${sub}</text></g>`;
   const W = (d,col,label,lx,ly,dash)=>`<path d="${d}" fill="none" stroke="${col}" stroke-width="2" ${dash?'stroke-dasharray="5 4"':''} marker-end="url(#ar${col.slice(1)})"/>${label?`<text class="wl" x="${lx}" y="${ly}" fill="${col}">${label}</text>`:''}`;
   const P='#ff8a3d', Y='#ffc46b', C='#4cc9e0', I='#a98bff', T='#ff5d73', K='#e0e36a', G='#7ce0a0';
   return `<svg viewBox="0 0 1100 640" role="img" aria-label="Bitaxe Gamma block diagram">
