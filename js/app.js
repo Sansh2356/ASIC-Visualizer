@@ -521,18 +521,29 @@ function buildLabels(){
   });
 }
 function short(d){ const m = {U8:"BM1370",U4:"ESP32-S3",U2:"TPS546D24A",L1:"300 nH",U9:"Level shift",U10:"EMC2101",U7:"25 MHz",U3:"3V3 LDO",U5:"1V2 LDO",U6:"0V8 LDO",J1:"5 V in",J5:"USB-C",J3:"OLED hdr",J4:"Accessory",J6:"Fan",SW1:"Reset",SW2:"Boot",J2:"Tag-Connect",HS1:"Cooler",DSP1:"OLED"}; return m[d.ref]||d.name; }
-const _v = new THREE.Vector3();
+const _v = new THREE.Vector3(), _box = new THREE.Box3();
+let labelAnchorsAt = NaN, labelGold = ''; // explode value the cached anchors were computed for
+// World point each label hangs from: above a top-side part, below a bottom-side one. Geometry only moves
+// when the explode animation runs, so anchors are recomputed then and not every frame.
+function updateLabelAnchors(){
+  LABELED.forEach(ref=>{
+    const o = objs[ref]; if(!o) return;
+    _box.setFromObject(o.group);
+    o.labelAnchor = (o.labelAnchor || new THREE.Vector3()).set((_box.min.x+_box.max.x)/2, o.side==='top' ? _box.max.y+1 : _box.min.y-1, (_box.min.z+_box.max.z)/2);
+  });
+  labelAnchorsAt = state.explode;
+}
 function updateLabels(){
   const show = document.getElementById('oLabels').checked;
-  const r = stage.getBoundingClientRect();
-  const camUp = camera.position.y - controls.target.y;
+  if(!(Math.abs(state.explode - labelAnchorsAt) < 1e-4)) updateLabelAnchors();
+  if(!labelGold) labelGold = css('--gold');
   LABELED.forEach(ref=>{
     const o = objs[ref]; if(!o||!o.labelEl) return;
     let vis = show && isVisible(o.group);
     if(vis){
-      const box = new THREE.Box3().setFromObject(o.group);
-      if(o.side==='top'){ _v.set((box.min.x+box.max.x)/2, box.max.y+1, (box.min.z+box.max.z)/2); vis = camera.position.y > -5 || ref==='HS1'; }
-      else { _v.set((box.min.x+box.max.x)/2, box.min.y-1, (box.min.z+box.max.z)/2); vis = camera.position.y < 5; }
+      _v.copy(o.labelAnchor);
+      if(o.side==='top') vis = camera.position.y > -5 || ref==='HS1';
+      else vis = camera.position.y < 5;
       if(state.highlight && !state.highlight.includes(ref) && ref!==state.selected) vis=false;
       if(coolGroup.visible && ['U8'].includes(ref) && camera.position.y>0) vis = false;
     }
@@ -540,9 +551,9 @@ function updateLabels(){
     _v.project(camera);
     if(_v.z>1){ o.labelEl.style.display='none'; return; }
     o.labelEl.style.display='block';
-    o.labelEl.style.left = ((_v.x+1)/2*r.width)+'px';
-    o.labelEl.style.top = ((-_v.y+1)/2*r.height - 8)+'px';
-    o.labelEl.style.borderColor = ref===state.selected ? css('--gold') : '';
+    o.labelEl.style.left = ((_v.x+1)/2*stageW)+'px';
+    o.labelEl.style.top = ((-_v.y+1)/2*stageH - 8)+'px';
+    o.labelEl.style.borderColor = ref===state.selected ? labelGold : '';
   });
 }
 
@@ -577,8 +588,9 @@ function animate(now=performance.now()){
   renderer.render(scene,camera);
   updateLabels();
 }
+let stageW = 1, stageH = 1;
 function resize(){
-  const r = stage.getBoundingClientRect();
+  const r = stage.getBoundingClientRect(); stageW = r.width; stageH = r.height;
   renderer.setSize(r.width, r.height, false);
   camera.aspect = r.width/Math.max(1,r.height); camera.updateProjectionMatrix();
 }
