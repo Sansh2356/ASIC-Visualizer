@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Bitaxe Gamma Explorer</title>
+<title>Miner Board Explorer</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="css/styles.css">
@@ -11,7 +11,8 @@
 <body>
 <div class="app">
   <header class="top">
-    <div class="brand"><h1>Bitaxe <b>Gamma</b> Explorer</h1><span>BM1370 · rev 601 KiCad · 57.3 × 97.2 mm · 4-layer</span></div>
+    <div class="brand"><h1 id="brandH1"></h1><span id="brandSub"></span></div>
+    <div class="seg" role="group" aria-label="Board" id="boards"></div>
     <div class="seg" role="group" aria-label="Mode">
       <button id="mFree" aria-pressed="true">Free mode</button>
       <button id="mTour" aria-pressed="false">Guided mode</button>
@@ -21,7 +22,7 @@
       <button id="vDiag" aria-pressed="false">Block diagram</button>
     </div>
     <div class="spacer"></div>
-    <div class="stats"><span>Hash <b>≈1.07 TH/s</b> @525 MHz</span><span>Input <b>5 V DC</b></span><span>Core <b>1.15 V</b> default</span><span>Parts <b id="partCount">–</b></span></div>
+    <div class="stats" id="stats"></div>
   </header>
 
   <aside class="left" aria-label="Controls and component list">
@@ -38,7 +39,7 @@
       <p class="label">Display</p>
       <div class="opts">
         <label class="opt"><input type="checkbox" id="oCool"> Heatsink + fan</label>
-        <label class="opt"><input type="checkbox" id="oOled" checked> OLED display module</label>
+        <label class="opt" id="oOledRow"><input type="checkbox" id="oOled" checked> OLED display module</label>
         <label class="opt"><input type="checkbox" id="oExplode"> Exploded view</label>
         <label class="opt"><input type="checkbox" id="oXray"> X-ray PCB (see through)</label>
         <label class="opt"><input type="checkbox" id="oPassive" checked> Passives (R / C)</label>
@@ -84,6 +85,14 @@
 <script src="js/vendor/three.min.js"></script>
 <script src="js/vendor/OrbitControls.js"></script>
 <script src="js/data.js"></script>
+<script src="js/boards/gamma.js"></script>
+<script src="js/boards/supra.js"></script>
+<script src="js/boards/ultra.js"></script>
+<script src="js/boards/max.js"></script>
+<script src="js/boards/gt.js"></script>
+<script src="js/boards/hex.js"></script>
+<script src="js/boards/nerdqaxep.js"></script>
+<script src="js/boards/nerdqaxepp.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

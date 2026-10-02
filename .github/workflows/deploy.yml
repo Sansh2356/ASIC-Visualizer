@@ -27,7 +27,7 @@ jobs:
         with:
           node-version: 22
 
-      # a broken js/data.js fails the run before anything is deployed
+      # broken board data (js/data.js, js/boards/) fails the run before anything is deployed
       - name: Check board data
         run: node tools/check-data.js
 
