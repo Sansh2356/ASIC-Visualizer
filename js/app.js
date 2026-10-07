@@ -17,7 +17,7 @@ let MIRROR = true, SURF_T = .8, SURF_B = -.8;
 function toWorld(x,y){ const X = x-B.EDGE.x0-B.BW/2; return [MIRROR ? -X : X, (y-B.EDGE.y0-B.BH/2)]; }
 const sizeK = ()=> Math.max(B.BW, B.BH)/97.2; // camera distances are tuned for the Gamma; bigger boards scale up
 const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
-// seeded PRNG (mulberry32) so decorative texture detail is identical on every load
+// seeded PRNG (mulberry32) so texture detail is stable across loads
 function rng(seed){ return ()=>{ seed=(seed+0x6D2B79F5)|0; let t=Math.imul(seed^seed>>>15,1|seed); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
 
 function makeLabelTexture(text, w, h, opts={}){
@@ -61,7 +61,7 @@ function init(){
   renderer.outputEncoding = THREE.sRGBEncoding;
   renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x0b0f0e);
+  scene.background = new THREE.Color(0x0c100f);
   camera = new THREE.PerspectiveCamera(35, 1, 1, 2000);
   camera.position.set(95, 120, 120);
   controls = new THREE.OrbitControls(camera, cv);
@@ -77,7 +77,7 @@ function init(){
   const under = new THREE.DirectionalLight(0xbfd6ff, .55); under.position.set(-50,-140,-40); scene.add(under);
   const rim = new THREE.DirectionalLight(0xffe2b0, .35); rim.position.set(-120,40,-80); scene.add(rim);
 
-  // ground grid (bench mat)
+  // ground grid
   const grid = new THREE.GridHelper(400, 40, 0x1c2622, 0x141b18); grid.position.y = -38; scene.add(grid);
 
   baseMaterials();
@@ -114,7 +114,7 @@ function boardTexture(side){
   const s = 12, c = document.createElement('canvas'); c.width = Math.round(BW*s); c.height = Math.round(BH*s);
   const g = c.getContext('2d');
   g.fillStyle = ART.mask || '#123d2a'; g.fillRect(0,0,c.width,c.height);
-  // subtle copper pour texture (decorative, seeded so it is stable between loads)
+  // copper pour texture, seeded for stability across loads
   const rand = rng(601);
   g.globalAlpha = .18; g.fillStyle = ART.pour || '#1f6a45';
   for(let i=0;i<14*B.BW*B.BH/5568;i++){ g.fillRect(rand()*c.width, rand()*c.height, 30+rand()*180, 20+rand()*120); }
@@ -139,8 +139,7 @@ function boardTexture(side){
   }
   g.fillStyle='#eef2ef'; g.font=`500 ${2.2*s}px "IBM Plex Mono", monospace`; g.textAlign='center';
   (ART.silk[side]||[]).forEach(([t,x,y])=>{ const [a,b]=P(x,y); g.fillText(t,a,b); });
-  // vias: decorative stitching, not from KiCad. A fresh seeded stream per call gives both faces the same
-  // through-hole positions; vias that would land in or beside a mounting hole are skipped.
+  // via stitching (not from KiCad); seeded stream keeps both faces consistent, holes excluded
   g.fillStyle='rgba(216,179,90,.8)';
   const vr = rng(1370);
   for(let i=0;i<220*BW*BH/5568;i++){ const x = EDGE.x0+3+vr()*(BW-6), y = EDGE.y0+3+vr()*(BH-6);
@@ -632,6 +631,19 @@ function resize(){
 }
 
 /* ====================================================================
+   THEME
+   ==================================================================== */
+function systemDark(){ return window.matchMedia('(prefers-color-scheme: dark)').matches; }
+function storedTheme(){ return localStorage.getItem('asicv-theme'); }
+function currentlyDark(){ const t=storedTheme(); return t ? t==='dark' : systemDark(); }
+function applyTheme(dark){ document.documentElement.setAttribute('data-theme', dark?'dark':'light'); }
+function toggleTheme(){
+  const next = !currentlyDark();
+  localStorage.setItem('asicv-theme', next?'dark':'light');
+  applyTheme(next);
+}
+
+/* ====================================================================
    UI: lists, inspector, options, tour, diagram
    ==================================================================== */
 function esc(s){ return String(s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
@@ -816,6 +828,9 @@ function bindOptions(){
   document.getElementById('tPrev').addEventListener('click',()=>goStep(state.tourIdx-1));
   document.getElementById('tNext').addEventListener('click',()=>{ if(state.tourIdx>=B.TOUR.length-1) setMode('free'); else goStep(state.tourIdx+1); });
   window.addEventListener('hashchange',()=>{ const id = location.hash.slice(1); if(BOARDS[id] && id!==B.id) setBoard(id); });
+  document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+  // Follow the OS setting automatically when the user has not pinned a preference
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e=>{ if(!storedTheme()) applyTheme(e.matches); });
   window.addEventListener('keydown',e=>{
     if(state.mode!=='tour' || e.target.tagName==='INPUT') return;
     if(e.key==='ArrowRight') document.getElementById('tNext').click();
@@ -838,7 +853,12 @@ function renderHeader(){
 }
 function renderBoardSwitch(){
   const el = document.getElementById('boards');
-  el.innerHTML = Object.values(BOARDS).map(b=>`<button data-board="${b.id}" aria-pressed="false" title="${esc(b.title)}">${esc(b.tab)}</button>`).join('');
+  const all = Object.values(BOARDS);
+  // Split into Bitaxe family and others (NerdQAxe etc.) for visual grouping
+  const bitaxe = all.filter(b=>b.title.toLowerCase().includes('bitaxe'));
+  const others  = all.filter(b=>!b.title.toLowerCase().includes('bitaxe'));
+  const mkBtn   = b=>`<button data-board="${b.id}" aria-pressed="false" title="${esc(b.title)}">${esc(b.tab)}</button>`;
+  el.innerHTML  = bitaxe.map(mkBtn).join('') + (others.length ? '<span class="board-sep" aria-hidden="true"></span>' + others.map(mkBtn).join('') : '');
   el.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>setBoard(b.dataset.board)));
 }
 // Show a board: rebuild the 3D scene and every board-dependent panel. Display options carry over.
@@ -931,6 +951,7 @@ function boot(){
   try{
     init(); renderBoardSwitch(); bindOptions(); setBoard(location.hash.slice(1));
     document.getElementById('loading').remove(); // only once everything is built, so errors stay visible
+    if(!localStorage.getItem('asicv-visited')){ localStorage.setItem('asicv-visited','1'); setMode('tour'); }
   }catch(err){ console.error(err); const l=document.getElementById('loading'); if(l) l.textContent='Error: '+err.message; }
 }
 if(document.fonts && document.fonts.ready) document.fonts.ready.then(boot); else boot();
