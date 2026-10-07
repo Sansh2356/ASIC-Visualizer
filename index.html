@@ -7,52 +7,84 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="css/styles.css">
+<!-- Apply theme before first paint to avoid flash -->
+<script>
+(function(){
+  var stored = localStorage.getItem('asicv-theme');
+  var dark = stored ? stored === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+  document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+})();
+</script>
 </head>
 <body>
 <div class="app">
   <header class="top">
-    <div class="brand"><h1 id="brandH1"></h1><span id="brandSub"></span></div>
-    <div class="seg" role="group" aria-label="Board" id="boards"></div>
-    <div class="seg" role="group" aria-label="Mode">
-      <button id="mFree" aria-pressed="true">Free mode</button>
-      <button id="mTour" aria-pressed="false">Guided mode</button>
+    <div class="header-row header-top">
+      <div class="brand"><h1 id="brandH1"></h1><span id="brandSub"></span></div>
+      <div class="spacer"></div>
+      <div class="stats" id="stats"></div>
+      <button class="theme-toggle" id="themeToggle" aria-label="Toggle light/dark mode" title="Toggle light/dark mode">
+        <!-- sun: shown in dark mode to switch to light -->
+        <svg class="icon-sun" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2m-3.5-7.5-1.4 1.4m-9.2 9.2-1.4 1.4m0-12.2 1.4 1.4m9.2 9.2 1.4 1.4"/>
+        </svg>
+        <!-- moon: shown in light mode to switch to dark -->
+        <svg class="icon-moon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </button>
     </div>
-    <div class="seg" role="group" aria-label="View">
-      <button id="vBoard" aria-pressed="true">3D board</button>
-      <button id="vDiag" aria-pressed="false">Block diagram</button>
+    <div class="header-row header-bottom">
+      <div class="seg" role="group" aria-label="Board" id="boards"></div>
+      <div class="spacer"></div>
+      <div class="header-controls">
+        <div class="seg" role="group" aria-label="Mode">
+          <button id="mFree" aria-pressed="true">Free</button>
+          <button id="mTour" aria-pressed="false">Guided</button>
+        </div>
+        <div class="seg" role="group" aria-label="View">
+          <button id="vBoard" aria-pressed="true">3D board</button>
+          <button id="vDiag" aria-pressed="false">Block diagram</button>
+        </div>
+      </div>
     </div>
-    <div class="spacer"></div>
-    <div class="stats" id="stats"></div>
   </header>
 
   <aside class="left" aria-label="Controls and component list">
     <section>
-      <p class="label">Camera</p>
-      <div class="views" id="views">
-        <button data-view="iso" aria-pressed="true">Isometric</button>
-        <button data-view="top">Top side</button>
-        <button data-view="bottom">Bottom side</button>
-        <button data-view="edge">Edge on</button>
-      </div>
+      <details>
+        <summary class="label">Camera</summary>
+        <div class="views" id="views">
+          <button data-view="iso" aria-pressed="true">Isometric</button>
+          <button data-view="top">Top side</button>
+          <button data-view="bottom">Bottom side</button>
+          <button data-view="edge">Edge on</button>
+        </div>
+      </details>
     </section>
     <section>
-      <p class="label">Display</p>
-      <div class="opts">
-        <label class="opt"><input type="checkbox" id="oCool"> Heatsink + fan</label>
-        <label class="opt" id="oOledRow"><input type="checkbox" id="oOled" checked> OLED display module</label>
-        <label class="opt"><input type="checkbox" id="oExplode"> Exploded view</label>
-        <label class="opt"><input type="checkbox" id="oXray"> X-ray PCB (see through)</label>
-        <label class="opt"><input type="checkbox" id="oPassive" checked> Passives (R / C)</label>
-        <label class="opt"><input type="checkbox" id="oTP"> Test points</label>
-        <label class="opt"><input type="checkbox" id="oLabels" checked> Labels</label>
-        <label class="opt"><input type="checkbox" id="oColor"> Colour by subsystem</label>
-      </div>
+      <details>
+        <summary class="label">Display</summary>
+        <div class="opts">
+          <label class="opt"><input type="checkbox" id="oLabels" checked> Labels</label>
+          <label class="opt"><input type="checkbox" id="oPassive" checked> Passives (R / C)</label>
+          <label class="opt" id="oOledRow"><input type="checkbox" id="oOled" checked> OLED display</label>
+          <label class="opt"><input type="checkbox" id="oCool"> Heatsink + fan</label>
+          <div class="opts-divider" aria-hidden="true"></div>
+          <label class="opt muted"><input type="checkbox" id="oExplode"> Exploded view</label>
+          <label class="opt muted"><input type="checkbox" id="oXray"> X-ray PCB</label>
+          <label class="opt muted"><input type="checkbox" id="oTP"> Test points</label>
+          <label class="opt muted"><input type="checkbox" id="oColor"> Colour by subsystem</label>
+        </div>
+      </details>
     </section>
     <section>
-      <p class="label">Signal & power flows</p>
-      <div class="opts" id="flowOpts"></div>
+      <details open>
+        <summary class="label">Signal &amp; power flows</summary>
+        <div class="opts" id="flowOpts"></div>
+      </details>
     </section>
-    <section>
+    <section class="section-components">
       <p class="label">Components</p>
       <input class="search" id="search" type="search" placeholder="Search ref, part or function" aria-label="Search components">
       <div id="list"></div>
