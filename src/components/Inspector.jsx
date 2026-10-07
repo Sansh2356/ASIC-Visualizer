@@ -1,6 +1,8 @@
-import { Fragment, useState } from 'react';
+import { Fragment, useState, lazy, Suspense } from 'react';
 import { useStore, BOARDS } from '../store/index.js';
 import { GROUPS, ASICS, partCount } from '../data/index.js';
+
+const HashEngine = lazy(() => import('../hash/HashEngine.jsx').then(m => ({ default: m.HashEngine })));
 
 function esc(s) { return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
@@ -66,7 +68,14 @@ export function Inspector({ sceneRef }) {
       {d.netsStr && !d.nets && (
         <><h3>Connected nets</h3><div className="nets">{d.netsStr.split('/').map(n => <span key={n}>{n}</span>)}</div></>
       )}
-      {d.mat === 'asic' && board && <AsicExtras board={board} />}
+      {d.mat === 'asic' && board && (
+        <>
+          <AsicExtras board={board} />
+          <Suspense fallback={<div style={{ padding: '10px', color: 'var(--c-fg2)', fontSize: 12 }}>Loading SHA-256 engine…</div>}>
+            <HashEngine />
+          </Suspense>
+        </>
+      )}
       {d.note && <p className="note">{d.note}</p>}
       {d.links && (
         <><h3>Source</h3><div className="links">{d.links.map(([t, u]) => <a key={u} href={u} target="_blank" rel="noopener">{t} ↗</a>)}</div></>
