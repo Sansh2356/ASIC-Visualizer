@@ -159,6 +159,24 @@ export class Scene {
   getObjs() { return this.objs; }
   partCountForBoard() { return this.B ? partCount(this.B) : 0; }
 
+  // Briefly flash the ASIC chip mesh with a tint color (hex number, e.g. 0x00ff88).
+  // durationMs defaults to 200ms. Called by the SHA-256 hash engine on each round tick.
+  pulseAsic(color = 0x00ff88, durationMs = 180) {
+    const asicObj = Object.values(this.objs).find(o => o.data?.mat === 'asic');
+    if (!asicObj?.mesh) return;
+    const mesh = asicObj.mesh;
+    const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    const origColors = mats.map(m => m.emissive?.getHex?.() ?? 0);
+    const origIntensities = mats.map(m => m.emissiveIntensity ?? 0);
+    const col = new THREE.Color(color);
+    mats.forEach(m => { if (m.emissive) { m.emissive.set(col); m.emissiveIntensity = 0.6; } });
+    setTimeout(() => {
+      mats.forEach((m, i) => {
+        if (m.emissive) { m.emissive.setHex(origColors[i]); m.emissiveIntensity = origIntensities[i]; }
+      });
+    }, durationMs);
+  }
+
   destroy() {
     this._unsubscribes.forEach(u => u());
     if (this._animId) cancelAnimationFrame(this._animId);
