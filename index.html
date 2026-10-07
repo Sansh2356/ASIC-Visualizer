@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Miner Board Explorer</title>
+<title>ASIC Visualizer</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="css/styles.css">
@@ -45,6 +45,7 @@
         <div class="seg" role="group" aria-label="View">
           <button id="vBoard" aria-pressed="true">3D board</button>
           <button id="vDiag" aria-pressed="false">Block diagram</button>
+          <button id="vComp" aria-pressed="false">Compare</button>
         </div>
       </div>
     </div>
@@ -109,6 +110,7 @@
       </div>
     </div>
     <div id="diagram" hidden></div>
+    <div id="compare" hidden></div>
   </main>
 
   <aside class="right" aria-label="Component inspector"><div class="insp" id="insp"></div></aside>

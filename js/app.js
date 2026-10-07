@@ -682,7 +682,12 @@ function ensureVisibleFor(ref){
 function select(ref, opts={}){
   state.selected = ref;
   if(ref){ ensureVisibleFor(ref); if(opts.fly){ const o=objs[ref]; frameRefs([ref], o.side==='bottom'?'bottom':'top'); } }
-  if(state.mode==='free') state.highlight = null;
+  if(state.mode==='free'){
+    state.highlight = null;
+    // Keep URL in sync so the current view is shareable
+    const newHash = ref ? B.id+'/'+ref : B.id;
+    if(location.hash.slice(1) !== newHash) history.replaceState(null,'','#'+newHash);
+  }
   applyHighlight();
   renderInspector();
   document.querySelectorAll('#list .item').forEach(b=>b.setAttribute('aria-current', b.dataset.ref===ref));
@@ -825,9 +830,14 @@ function bindOptions(){
   document.getElementById('mTour').addEventListener('click',()=>setMode('tour'));
   document.getElementById('vBoard').addEventListener('click',()=>setPane('board'));
   document.getElementById('vDiag').addEventListener('click',()=>setPane('diag'));
+  document.getElementById('vComp').addEventListener('click',()=>setPane('comp'));
   document.getElementById('tPrev').addEventListener('click',()=>goStep(state.tourIdx-1));
   document.getElementById('tNext').addEventListener('click',()=>{ if(state.tourIdx>=B.TOUR.length-1) setMode('free'); else goStep(state.tourIdx+1); });
-  window.addEventListener('hashchange',()=>{ const id = location.hash.slice(1); if(BOARDS[id] && id!==B.id) setBoard(id); });
+  window.addEventListener('hashchange',()=>{
+    const [boardId, ref] = location.hash.slice(1).split('/');
+    if(BOARDS[boardId] && boardId!==B.id) setBoard(boardId);
+    if(ref) select(ref, {fly:true});
+  });
   document.getElementById('themeToggle').addEventListener('click', toggleTheme);
   // Follow the OS setting automatically when the user has not pinned a preference
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e=>{ if(!storedTheme()) applyTheme(e.matches); });
@@ -843,7 +853,7 @@ function bindOptions(){
 function renderHeader(){
   document.getElementById('brandH1').innerHTML = B.h1;
   document.getElementById('brandSub').textContent = B.sub;
-  document.title = B.title+' Explorer';
+  document.title = 'ASIC Visualizer — '+B.title;
   document.getElementById('stats').innerHTML = B.stats.map(([k,v,t])=>`<span>${k} <b>${v}</b>${t?' '+t:''}</span>`).join('') + `<span>Parts <b id="partCount">–</b></span>`;
   document.querySelectorAll('#boards button').forEach(b=>b.setAttribute('aria-pressed', b.dataset.board===B.id));
   // keep the active tab visible when the switch scrolls (narrow screens)
@@ -875,6 +885,9 @@ function setBoard(id){
   const d = document.getElementById('diagram'); d.innerHTML = ''; delete d.dataset.built;
   setMode('free'); renderList();
   setView('iso', true);
+  // Auto-enable the primary power flow so the board reads immediately
+  const pw = B.FLOWS.find(f=>/power|core/i.test(f.name)) || B.FLOWS[0];
+  if(pw) applyFlows([pw.id]);
 }
 
 /* modes */
@@ -918,17 +931,60 @@ function frameCooler(){
   flyTo(t.clone().add(new THREE.Vector3(-111,115,161).multiplyScalar(k)), t);
 }
 
-/* block diagram */
+/* block diagram + comparison */
 function setPane(p){
   document.getElementById('vBoard').setAttribute('aria-pressed', p==='board');
   document.getElementById('vDiag').setAttribute('aria-pressed', p==='diag');
-  const d = document.getElementById('diagram'); d.hidden = p!=='diag';
-  if(p==='diag' && !d.dataset.built){ d.innerHTML = diagramSVG(); d.dataset.built='1';
-    d.querySelectorAll('.blk').forEach(b=>{
-      const open = ()=>{ setPane('board'); select(b.dataset.ref,{fly:true}); };
-      b.addEventListener('click',open);
-      b.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); open(); } });
-    }); }
+  document.getElementById('vComp').setAttribute('aria-pressed', p==='comp');
+  document.getElementById('diagram').hidden = p!=='diag';
+  document.getElementById('compare').hidden = p!=='comp';
+  if(p==='diag'){
+    const d = document.getElementById('diagram');
+    if(!d.dataset.built){ d.innerHTML = diagramSVG(); d.dataset.built='1';
+      d.querySelectorAll('.blk').forEach(b=>{
+        const open = ()=>{ setPane('board'); select(b.dataset.ref,{fly:true}); };
+        b.addEventListener('click',open);
+        b.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); open(); } });
+      });
+    }
+  }
+  if(p==='comp'){
+    const c = document.getElementById('compare');
+    c.innerHTML = comparisonHTML();
+    c.querySelectorAll('tr[data-board]').forEach(tr=>
+      tr.addEventListener('click',()=>{ setPane('board'); setBoard(tr.dataset.board); })
+    );
+  }
+}
+
+function comparisonHTML(){
+  const rows = Object.values(BOARDS).map(b=>{
+    const A = ASICS[b.asic.chip];
+    const hr = (b.asic.def * A.smallCores * b.asic.count / 1e6).toFixed(2);
+    const statVal = k=>{ const s=b.stats.find(([key])=>key===k); return s ? s[1]+(s[2]?' '+s[2]:'') : '—'; };
+    const active = b.id===B.id ? ' class="active-board"' : '';
+    return `<tr data-board="${b.id}"${active}>
+      <td>${esc(b.tab)}</td>
+      <td>${esc(b.asic.chip)}</td>
+      <td class="num">${hr} TH/s</td>
+      <td>${esc(statVal('Input'))}</td>
+      <td>${esc(statVal('Core'))}</td>
+      <td>${b.asic.count>1?b.asic.count+'× ':''}${A.cores} cores / ${A.smallCores.toLocaleString()} small</td>
+      <td class="dim">${esc(A.origin)}</td>
+    </tr>`;
+  }).join('');
+  return `<div class="comp-wrap">
+    <h2 class="comp-title">Board comparison</h2>
+    <p class="comp-sub">Hashrate at default frequency. Click any row to switch boards.</p>
+    <div class="comp-scroll">
+      <table class="comp-table">
+        <thead><tr>
+          <th>Board</th><th>ASIC</th><th>Hashrate</th><th>Input</th><th>Core V</th><th>Cores</th><th>Chip origin</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  </div>`;
 }
 function diagramSVG(){
   const D = B.diagram;
@@ -949,7 +1005,10 @@ function diagramSVG(){
 function boot(){
   if(!window.THREE || !THREE.OrbitControls){ document.getElementById('loading').textContent='Could not load the 3D engine. Check your connection and reload.'; return; }
   try{
-    init(); renderBoardSwitch(); bindOptions(); setBoard(location.hash.slice(1));
+    init(); renderBoardSwitch(); bindOptions();
+    const [initBoard, initRef] = location.hash.slice(1).split('/');
+    setBoard(initBoard);
+    if(initRef) select(initRef, {fly:true});
     document.getElementById('loading').remove(); // only once everything is built, so errors stay visible
     if(!localStorage.getItem('asicv-visited')){ localStorage.setItem('asicv-visited','1'); setMode('tour'); }
   }catch(err){ console.error(err); const l=document.getElementById('loading'); if(l) l.textContent='Error: '+err.message; }
