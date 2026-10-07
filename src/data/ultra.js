@@ -1,0 +1,182 @@
+import { registerBoard, ASICS, PKG, ESPM } from "../data/index.js";
+/* Bitaxe Ultra: component positions, nets and descriptions (from bitaxeUltra KiCad files, ultra-205 branch, + ESP-Miner).
+   Generated with tools/kicad-extract.js plus hand-written part text. */
+
+registerBoard((()=>{
+const EDGE = {"x0":77.189,"x1":133.732,"y0":47.522,"y1":147.284,"r":2.54};
+
+const PARTS = [
+{ref:"J1",short:"5 V in",name:"5 V DC barrel jack",part:"CUI PJ-036AH-SMT",pkg:"5.5 × 2.1 mm, SMT",group:"io",side:"top",x:87.376,y:68.834,rot:90,dims:[9,14.4,11],mat:"jack",face:"-x",what:"Main power input, 5 V DC.",how:"Its switch contact drives PLUG_SENSE (pulled up by R8), so the firmware can tell whether a plug is inserted. Power then flows through the INA260 to the 5 V rail.",specs:[["Voltage","5 V DC"],["Plug sense","PLUG_SENSE → ESP32"]],nets:["VIN","GND","PLUG_SENSE"]},
+ {ref:"J4",short:"Fan",name:"Fan connector (4-pin)",part:"Molex 0470531000",pkg:"4-pin 2.54 mm",group:"thermal",side:"top",x:89.621,y:143.622,rot:0,dims:[10.2,5.8,6],mat:"fanconn",what:"Standard 4-pin PWM fan header. Active cooling is required; the heatsink alone is not enough.",how:"Pins: GND, 5 V, TACH, PWM. Use a 5 V PWM fan. A 12 V fan will spin too slowly and the board will overheat. The project suggests the Noctua NF-A4x10 5V PWM for quieter running. R25 pulls PWM high so the fan runs at full speed if the controller is not driving it.",specs:[["Pins","GND · 5V · TACH · PWM"],["Fan","40 mm, 5 V, 4-pin PWM"]],nets:["GND","5V","FAN_TACH","FAN_PWM"]},
+ {ref:"J5",short:"Tag-Connect",name:"Tag-Connect programming pads",part:"TC2030-IDC-NL footprint",pkg:"2 × 3 pads, 1.27 mm",group:"io",side:"top",x:128.13,y:57.73,rot:180,dims:[4,2.6,0.05],mat:"pads",shape:"tagconnect",bom:false,what:"A connector-less programming footprint. A spring-pin Tag-Connect cable presses onto these pads.",how:"Exposes EN, 3.3 V, UART0 TX/RX, GND and IO0, so an ESP-PROG can flash or recover the ESP32 even when USB is not usable.",specs:[["Signals","EN · 3V3 · U0TXD · GND · U0RXD · IO0"]],nets:["EN","3V3","P_TX","P_RX","IO0"]},
+ {ref:"J6",short:"Accessory",name:"Accessory port",part:"6-pin 2.54 mm header",pkg:"1 × 6",group:"io",side:"bottom",x:99.172,y:51.054,rot:90,dims:[2.54,15.24,2.5],mat:"header",dnp:true,what:"An expansion header for add-ons.",how:"Carries 5 V, GND and ESP32 GPIO39–42. Not in the BOM, so usually unpopulated.",specs:[["Pin 1–2","5 V, GND"],["Pin 3–6","GPIO39, 40, 41, 42"],["Protocol","BAP UART (TX 39 / RX 40)"]],nets:["5V","GND","GPIO39–42"],links:[["BAP readme","https://github.com/bitaxeorg/ESP-Miner/blob/master/main/bap/bap_readme.md"]]},
+ {ref:"J8",short:"USB-C",name:"USB-C port (data)",part:"GCT USB4105-GF-A",pkg:"USB-C receptacle, USB 2.0",group:"io",side:"top",x:80.865,y:83.26,rot:90,dims:[7.3,8.94,3.2],mat:"metal",face:"-x",shape:"usbc",what:"For flashing firmware and reading logs. It does not power the board.",how:"Only D+ and D− are wired to the ESP32-S3's native USB. Unlike the Gamma, CC1/CC2 have 5.1 kΩ pull-downs (R3/R5), so USB-C-to-C cables are detected.",specs:[["Data","USB 2.0 full speed → ESP32 native USB"],["VBUS","Not connected"],["CC1/CC2","Not connected"]],nets:["USB_D+","USB_D−","GND"]},
+ {ref:"J9",short:"OLED hdr",name:"OLED display header",part:"4-pin 2.54 mm header",pkg:"1 × 4",group:"io",side:"top",x:87.205,y:50.292,rot:180,dims:[10.16,2.54,8.5],mat:"header",what:"Plugs in a 0.91\" SSD1306 128 × 32 I2C OLED that shows hashrate, efficiency, IP address and status.",how:"Pinout GND, VCC (3.3 V), SCL, SDA, silkscreened next to the header. It shares the I2C bus with U2 and U10. The display sits at address 0x3C.",specs:[["Display","SSD1306 128×32, 0.91\""],["I2C","0x3C"],["Pins","GND · VCC · SCL · SDA"]],nets:["GND","3V3","SCL","SDA"]},
+ {ref:"L1",short:"150 nH",name:"Buck output inductor",part:"Eaton FP1005R1-R15-R (150 nH)",pkg:"FP1005 SMD",group:"power",side:"bottom",x:104.57,y:82.03,rot:-90,dims:[10,7,5],mat:"inductor",what:"Smooths the switched 5 V from Q1/Q2 into steady DC current for the ASIC.",specs:[["Inductance","150 nH"],["Between","SW → VDD"]],nets:["SW","VDD"]},
+ {ref:"Q1",name:"High-side MOSFET",part:"TI CSD17311Q5",pkg:"SON 5 × 6 mm",group:"power",side:"bottom",x:91.72,y:80.066,rot:90,dims:[5,6,1],mat:"ic",mark:"17311",leads:false,what:"Switches 5 V onto the switch node when U9 turns it on.",nets:["5V","SW","gate from U9"]},
+ {ref:"Q2",name:"Low-side MOSFET",part:"TI CSD17311Q5",pkg:"SON 5 × 6 mm",group:"power",side:"bottom",x:97.682,y:80.11,rot:-90,dims:[5,6,1],mat:"ic",mark:"17311",leads:false,what:"Clamps the switch node to ground while Q1 is off (synchronous rectification). R12 on its gate sets U9's current limit.",nets:["SW","GND","gate from U9"]},
+ {ref:"Q4",name:"Regulator enable switch",part:"2N7002K",pkg:"SOT-323",group:"power",side:"bottom",x:110.37,y:69.78,rot:180,dims:[2,1.25,0.9],mat:"ic",what:"An N-MOSFET driven by the ESP32's PWR_EN line. When on, it pulls U9's EN/SS pin low and turns the core rail off.",nets:["PWR_EN","U9 EN/SS","GND"]},
+ {ref:"SW1",short:"Reset",name:"RESET button",part:"CS1213AGF260",pkg:"SMD tact switch",group:"io",side:"top",x:130.186,y:104.448,rot:180,dims:[3.6,3,1.6],mat:"button",what:"Restarts the ESP32.",how:"Pulls the ESP32's EN pin to ground. EN normally rises through R16 (10 kΩ) and C22 (1 µF), which also gives a clean power-on reset delay.",specs:[["Signal","EN"]],nets:["EN","GND"]},
+ {ref:"SW2",short:"Boot",name:"BOOT button",part:"CS1213AGF260",pkg:"SMD tact switch",group:"io",side:"top",x:130.082,y:113.155,rot:180,dims:[3.6,3,1.6],mat:"button",what:"Holds GPIO0 low. Hold it while pressing RESET to enter the ESP32 ROM bootloader for recovery flashing.",how:"While running, ESP-Miner also reads this button as user input, for example to cycle display screens or, held at boot, to restore settings.",specs:[["Signal","GPIO0 (strapping pin)"]],nets:["IO0","GND"]},
+ {ref:"U1",short:"25 MHz",name:"25 MHz oscillator",part:"25 MHz XO (JO32)",pkg:"3.2 × 2.5 mm SMD",group:"asic",side:"bottom",x:115.19,y:125.02,rot:90,dims:[3.2,2.5,0.9],mat:"metal",what:"The reference clock for the ASIC.",how:"Runs from 1.8 V and drives BM1366 CLKI. The chip's PLL multiplies it up to the hashing clock; 485 MHz is 19.4 × 25 MHz.",specs:[["Frequency","25 MHz"],["Supply","1.8 V"]],nets:["1V8","GND","CLKI"]},
+ {ref:"U2",short:"Level shift",name:"Logic level shifter",part:"TI TXB0104RGYR",pkg:"VQFN-14 3.5 × 3.5 mm",group:"control",side:"bottom",x:116.422,y:99.265,rot:-90,dims:[4.27,4.27,0.9],mat:"ic",mark:"TXB0104",what:"Translates the ESP32's 3.3 V UART and reset to the BM1366's 1.8 V I/O and back.",how:"An auto-direction 4-bit translator: each channel senses which side is driving, so no direction pins are needed. Channels carry TX → CI, RO → RX and the reset line → RST_N.",specs:[["A side","1.8 V (ASIC)"],["B side","3.3 V (ESP32)"]],nets:["1V8","RO","CI","RST_N","GND","RST","TX","RX","3V3"]},
+ {ref:"U5",short:"1V8 LDO",name:"1.8 V I/O regulator",part:"Microchip MCP1824T-1802E/OT",pkg:"SOT-23-5",group:"power",side:"bottom",x:93.753,y:129.308,rot:0,dims:[3.6,2.9,1],mat:"ic",what:"LDO making the 1.8 V rail for the BM1366's I/O ring, the oscillator and the ASIC side of the level shifter.",specs:[["In → out","5 V → 1.8 V"]],nets:["5V","1V8"]},
+ {ref:"U6",short:"0V8 LDO",name:"0.8 V I/O regulator",part:"Microchip MCP1824T-0802E",pkg:"SOT-23-5",group:"power",side:"bottom",x:102.32,y:130.24,rot:0,dims:[3.6,2.9,1],mat:"ic",what:"LDO making the 0.8 V rail for the BM1366's second I/O supply.",specs:[["In → out","5 V → 0.8 V"]],nets:["5V","0V8"]},
+ {ref:"U7",short:"EMC2101",name:"Fan controller",part:"Microchip EMC2101",pkg:"MSOP-8",group:"thermal",side:"bottom",x:101.397,y:116.027,rot:-90,dims:[5.4,3.1,1],mat:"ic",what:"Drives the fan's PWM and counts its tach pulses.",how:"The BM1366 has no temperature diode, so this EMC2101 is used only for the fan and its own internal sensor, placed close to the ASIC. ASIC temperature comes from the chip itself. I2C address 0x4C.",specs:[["I2C","0x4C"],["Fan","PWM out, TACH in"]],nets:["3V3","FAN_PWM","GND","FAN_TACH","SDA","SCL"]},
+ {ref:"U8",short:"INA260",name:"Power monitor",part:"TI INA260",pkg:"TSSOP-16",group:"power",side:"bottom",x:82.403,y:83.265,rot:0,dims:[7.2,5,1],mat:"ic",mark:"INA260",what:"Measures the board's input voltage, current and power.",how:"The input current flows through its integrated 2 mΩ shunt between VIN and the 5 V rail. The ESP32 reads it over I2C (0x40), and AxeOS shows the result as power and efficiency.",specs:[["I2C","0x40"],["Measures","VIN → 5V current, voltage, power"]],links:[["INA260 driver","https://github.com/bitaxeorg/ESP-Miner/blob/master/main/power/INA260.c"]],nets:["VIN","GND","SDA","SCL","3V3","5V"]},
+ {ref:"U9",short:"TPS40305",name:"Core buck controller",part:"TI TPS40305",pkg:"VSON-10 3 × 3 mm",group:"power",side:"bottom",x:98.202,y:69.422,rot:-90,dims:[2.9,1.8,0.9],mat:"ic",mark:"40305",leads:false,what:"A synchronous buck controller that turns 5 V into the ASIC's core rail (VDD). Unlike the TPS546 on later Bitaxes it has no digital interface.",how:"It drives two external MOSFETs, Q1 (high side) and Q2 (low side), switching 5 V through L1. Its feedback divider R14/R15 alone would set about 1.5 V. The DS4432U (U10) sinks a programmable current into the feedback node (OUT0), which is how the ESP32 sets the core voltage. Q4 lets the ESP32 hold its EN/SS pin low to keep VDD off. PGOOD reports to the ESP32.",specs:[["Input","5 V"],["Output","VDD, 1.2 V default"],["Switches","Q1 / Q2 CSD17311Q5"],["Voltage control","DS4432U current into FB"],["Feedback","R14 4.99 kΩ / R15 3.32 kΩ"]],nets:["5V","Q4-D","PGOOD","U9-COMP","OUT0","U9-BOOT","Q1-G","SW","Q2-G","U9-BP","GND"]},
+ {ref:"U10",short:"DS4432U",name:"Core-voltage DAC",part:"Maxim DS4432U+",pkg:"µSOP-8",group:"power",side:"bottom",x:110.23,y:58.09,rot:180,dims:[5.4,3.1,1],mat:"ic",what:"A two-channel current DAC that sets the core voltage.",how:"Output OUT0 sinks or sources a small programmable current into U9's feedback node. Pulling current out of the divider makes U9 raise or lower VDD to compensate. R16 sets the full-scale current. The ESP32 writes it over I2C (address 0x48).",specs:[["I2C","0x48"],["Channel used","OUT0 → U9 feedback"],["Full scale","Set by R16 (80.6 kΩ)"]],links:[["DS4432U driver","https://github.com/bitaxeorg/ESP-Miner/blob/master/main/power/DS4432U.c"]],nets:["SDA","SCL","GND","U10-FS0","OUT0","OUT1","3V3"]},
+ {ref:"U11",short:"3V3 LDO",name:"3.3 V regulator",part:"Richtek RT9080-33GJ5",pkg:"TSOT-23-5",group:"power",side:"bottom",x:112.563,y:63.38,rot:0,dims:[2.9,1.6,1],mat:"ic",what:"Low-dropout linear regulator making the 3.3 V logic rail from 5 V.",how:"Feeds the ESP32-S3 module, the EMC2101 fan controller, the OLED, the 3.3 V side of the level shifter, and the I2C/PGOOD pull-ups.",specs:[["In → out","5 V → 3.3 V"],["Rated current","600 mA"],["Type","LDO, low quiescent current"]],nets:["5V","3V3","GND"]},
+ {ref:"U12",short:"ESP32-S3",name:"ESP32-S3 controller",part:"Espressif ESP32-S3-WROOM-1-N16R8",pkg:"Module 18 × 25.5 mm, PCB antenna",group:"control",side:"top",x:117.43,y:72.61,rot:90,dims:[18,25.5,3.1],mat:"esp",face:"+x",mark:"ESP32-S3-WROOM-1",what:"The brain of the miner. It runs the open-source ESP-Miner firmware and the AxeOS web dashboard, connects to Wi-Fi, speaks Stratum to your pool, and feeds work to the ASIC.",how:"It gets jobs from the pool, builds work and sends it to the BM1366 over UART through U2. It sets the core voltage through the DS4432U, reads power from the INA260, runs the fan via U7, and drives the OLED. A 32.768 kHz crystal (Y1) gives it an accurate low-power clock.",specs:[["CPU","Dual-core Xtensa LX7, up to 240 MHz"],["Memory","16 MB flash, 8 MB PSRAM (N16R8)"],["Radio","2.4 GHz Wi-Fi 802.11 b/g/n, Bluetooth LE"],["ASIC UART","GPIO17 TX → CI, GPIO18 RX ← RO"],["ASIC reset","GPIO1"],["I2C","GPIO47 SDA, GPIO48 SCL"],["VDD sense","GPIO2 (ADC1 ch1)"],["Native USB","GPIO19 D−, GPIO20 D+"],["Accessory","GPIO39–42"]],nets:["3V3","TX/RX","RST","SDA/SCL","PGOOD","PWR_EN","PLUG_SENSE","USB D+/D−","EN","IO0"],links:[["ESP-Miner firmware","https://github.com/bitaxeorg/ESP-Miner"],["Web flasher","https://bitaxeorg.github.io/bitaxe-web-flasher/"]]},
+ {ref:"U14",short:"BM1366",name:"BM1366 mining ASIC",part:"Bitmain BM1366",pkg:"30-pad QFN-style, 2 exposed pads",group:"asic",side:"top",x:105.612,y:116.068,rot:180,dims:[6.2,6.3,1],mat:"asic",mark:"BM1366",what:"The chip that does the mining. It runs SHA-256 double hashing over block headers, searching for a nonce that gives a hash below the target.",how:"It comes from Bitmain's Antminer S19 XP. ESP-Miner treats it as 112 cores made of 894 small cores across 4 hash domains, so hashrate ≈ frequency × 894: the 485 MHz default gives ≈0.43 TH/s. It runs its I/O at 1.8 V and 0.8 V. The BM1366 has no temperature-diode pins, so the firmware reads its internal temperature sensor over UART instead.",specs:[["Origin","Antminer S19 XP (Bitmain)"],["Chip ID","0x1366"],["Cores","112 cores / 894 small cores"],["Hash domains","4"],["Default clock","485 MHz (options 400–575)"],["Default core V","1200 mV (options 1100–1300)"],["I/O rails","1.8 V and 0.8 V"],["Temperature","Internal sensor over UART"]],nets:["VDD (pad 29)","VSS (pad 30)","CI","RO","NRSTI","CLKI","VDDIO 1V8 / 0V8","ADDR0/1","VDD1–3 taps"],links:[["BM1366 driver (ESP-Miner)","https://github.com/bitaxeorg/ESP-Miner/blob/master/components/asic/bm1366.c"]]},
+ {ref:"Y1",name:"32.768 kHz crystal",part:"32.768 kHz, 7 pF",pkg:"SC-32S",group:"control",side:"bottom",x:122.595,y:78.349,rot:180,dims:[3.2,1.5,0.9],mat:"metal",what:"Low-frequency crystal for the ESP32's RTC (XIN32/XOUT32), loaded by C30/C31.",nets:["XIN32","XOUT32"]},
+];
+
+const PASSIVES = [
+["C1","0.1 µF","0402",115.25,127.81,180,"GND/1V8","asic","1V8 decoupling at U1.","bottom"],
+ ["C2","1 µF","0402",115.54,109.624,180,"GND/VDD3_0","asic","Domain ladder for U14: last tap (VDD3_0) to ground.","bottom"],
+ ["C3","1 µF","0402",114.44,107.79,180,"VDD3_0/VDD2_0","asic","Domain ladder for U14: bridges internal taps VDD3_0 and VDD2_0.","bottom"],
+ ["C4","1 µF","0402",110.69,120.13,0,"0V8/GND","asic","0V8 decoupling at U14.","bottom"],
+ ["C5","1 µF","0402",112.94,120.09,180,"1V8/GND","asic","1V8 decoupling at U1.","bottom"],
+ ["C6","1 µF","0402",113.14,106.03,180,"VDD2_0/VDD1_0","asic","Domain ladder for U14: bridges internal taps VDD2_0 and VDD1_0.","bottom"],
+ ["C7","0.1 µF","0402",112.268,114.656,-90,"VDD/GND","asic","VDD decoupling at the ASIC.","bottom"],
+ ["C8","1 µF","0402",111.81,104.24,180,"VDD1_0/VDD","asic","Domain ladder for U14: bridges VDD to its VDD1_0 tap.","bottom"],
+ ["C9","0.1 µF","0402",109.982,114.71,-90,"VDD/GND","asic","VDD decoupling at the ASIC.","bottom"],
+ ["C10","1 µF","0402",108.712,114.681,-90,"VDD/GND","asic","VDD decoupling at the ASIC.","bottom"],
+ ["C11","1 µF","0402",111.15,114.706,-90,"VDD/GND","asic","VDD decoupling at the ASIC.","bottom"],
+ ["C12","1 µF","0402",99.3,104.24,180,"VDD/VDD1_1","asic","Domain ladder for U14: bridges VDD to its VDD1_1 tap.","bottom"],
+ ["C13","330 µF","7343",105.6,114.56,-90,"VDD/GND","asic","VDD decoupling at the ASIC.","bottom"],
+ ["C14","1 µF","0402",104.15,120.66,0,"U14-VDDIO_18_1/GND","asic","Bypass on the ASIC's VDDIO_18_1 pin.","bottom"],
+ ["C15","1 µF","0402",98.01,106.04,180,"VDD1_1/VDD2_1","asic","Domain ladder for U14: bridges internal taps VDD1_1 and VDD2_1.","bottom"],
+ ["C16","1 µF","0402",104.13,121.81,0,"U14-VDDIO_08_1/GND","asic","Bypass on the ASIC's VDDIO_08_1 pin.","bottom"],
+ ["C17","1 µF","0402",96.73,107.78,180,"VDD2_1/VDD3_1","asic","Domain ladder for U14: bridges internal taps VDD2_1 and VDD3_1.","bottom"],
+ ["C18","1 µF","0402",95.659,109.681,180,"VDD3_1/GND","asic","Domain ladder for U14: last tap (VDD3_1) to ground.","bottom"],
+ ["C19","0.1 µF","0402",116.356,103.365,180,"1V8/GND","control","1V8 decoupling at U2.","bottom"],
+ ["C20","0.1 µF","0402",112.575,95.745,0,"3V3/GND","control","3.3 V decoupling at U2.","bottom"],
+ ["C21","1 µF","0402",123.89,101.66,180,"EN/GND","control","EN delay capacitor. Holds the ESP32 in reset until power is stable.","bottom"],
+ ["C22","1 µF","0402",93.733,131.818,0,"5V/GND","power","5 V input capacitor for U5.","bottom"],
+ ["C23","1 µF","0402",102.21,132.61,0,"5V/GND","power","5 V input capacitor for U6.","bottom"],
+ ["C24","1 µF","0402",96.763,129.118,-90,"1V8/GND","power","Output capacitor on the 1V8 rail.","bottom"],
+ ["C25","1 µF","0402",105.54,130.24,-90,"0V8/GND","power","Output capacitor on the 0V8 rail.","bottom"],
+ ["C27","1 µF","0402",111.531,65.931,0,"5V/GND","power","5 V input capacitor for U11.","bottom"],
+ ["C28","220 µF","CP6.3x7.7",103.49,141.42,-90,"5V/GND","power","5 V input capacitor for U6.","top"],
+ ["C29","0.1 µF","0402",97.56,137.64,180,"5V/GND","power","5 V input capacitor for U6.","bottom"],
+ ["C30","6.8 pF","0402",124.043,76.096,90,"XIN32/GND","control","Load capacitor for the 32.768 kHz crystal Y1.","bottom"],
+ ["C31","6.8 pF","0402",121.159,76.105,90,"XOUT32/GND","control","Load capacitor for the 32.768 kHz crystal Y1.","bottom"],
+ ["C33","0.1 µF","0402",101.59,110.57,90,"3V3/GND","thermal","3.3 V decoupling at U7.","bottom"],
+ ["C34","47 µF","1210",94.282,85.41,0,"5V/GND","power","5 V input capacitor for U8.","bottom"],
+ ["C35","1 µF","0402",83.37,89.48,0,"3V3/GND","power","3.3 V decoupling at U8.","bottom"],
+ ["C36","47 µF","1210",94.26,88.87,0,"5V/GND","power","5 V input capacitor for U8.","bottom"],
+ ["C37","47 µF","1210",94.22,92.32,0,"5V/GND","power","5 V input capacitor for U8.","bottom"],
+ ["C38","1 µF","0805",94.5,95.04,0,"5V/GND","power","5 V input capacitor for U8.","bottom"],
+ ["C39","3.3 nF","0402",105.13,67.45,0,"Q4-D/GND","power","Soft-start capacitor on U9's EN/SS pin; sets how fast VDD ramps up.","bottom"],
+ ["C40","180 pF","0805",97.383,65.268,180,"U9-COMP/OUT0","power","Part of U9's loop-compensation network.","bottom"],
+ ["C41","1.5 nF","0805",97.405,63.006,180,"U9-COMP/C41-Pad2","power","Part of U9's loop-compensation network.","bottom"],
+ ["C42","0.1 µF","0402",96.67,73.128,0,"U9-BOOT/SW","power","Bootstrap capacitor for U9's high-side gate drive.","bottom"],
+ ["C43","10 µF","0805",105.864,69.487,180,"U9-BP/GND","power","Bypass for U9's internal 5 V gate-drive regulator (BP).","bottom"],
+ ["C44","1 µF","0402",114.36,58.54,0,"3V3/GND","power","3.3 V decoupling at U10.","bottom"],
+ ["C45","470 pF","0805",93.472,66.42,0,"C45-Pad1/OUT0","power","Feed-forward capacitor across the top of the feedback divider; speeds up U9's response to load steps.","bottom"],
+ ["C46","220 µF","7343",102.352,89.64,180,"VDD/GND","power","Bulk output capacitor on VDD at L1.","bottom"],
+ ["C47","100 µF","1206",102.312,92.61,180,"VDD/GND","power","Bulk output capacitor on VDD at L1.","bottom"],
+ ["C49","1 µF","0402",113.72,60.5,180,"3V3/GND","power","3.3 V decoupling at U11.","bottom"],
+ ["C51","10 µF","0805",131.53,84.09,0,"3V3/GND","control","3.3 V decoupling at U12.","bottom"],
+ ["C52","0.1 µF","0402",131.53,85.7,0,"3V3/GND","control","3.3 V decoupling at U12.","bottom"],
+ ["R1","10 kΩ","0402",126.837,101.658,180,"3V3/EN","control","EN pull-up. With C21 it forms the ESP32's power-on reset delay.","bottom"],
+ ["R2","5.6 kΩ","0402",93.07,136.98,0,"FAN_TACH/3V3","thermal","Pull-up for the fan's open-collector tachometer.","bottom"],
+ ["R3","5.1 kΩ","0402",85.41,102,180,"GND/J8-CC1","io","5.1 kΩ CC1 pull-down: identifies the USB-C port as a device so C-to-C cables work.","bottom"],
+ ["R4","10 kΩ","0402",109.955,71.76,180,"3V3/PGOOD","power","Pull-up for U9's open-drain PGOOD output.","bottom"],
+ ["R5","5.1 kΩ","0402",85.42,100.53,180,"GND/J8-CC2","io","5.1 kΩ CC2 pull-down for USB-C cable detection.","bottom"],
+ ["R6","10 kΩ","0402",122.207,115.554,180,"GND/BI","asic","Ties ASIC chain input BI low. Unused with a single chip.","bottom"],
+ ["R7","10 kΩ","0402",109.85,74.41,0,"3V3/PWR_EN","power","Pull-up on PWR_EN, the line that drives Q4.","bottom"],
+ ["R8","1 MΩ","0402",113.77,70.44,-90,"3V3/PLUG_SENSE","io","Pull-up for J1's plug-detect switch (PLUG_SENSE).","bottom"],
+ ["R9","10 kΩ","0402",100.46,111.58,90,"FAN_PWM/3V3","thermal","Pulls the fan PWM line high, so the fan runs at full speed by default.","bottom"],
+ ["R10","3.83 kΩ","0402",94.829,64.084,-90,"C41-Pad2/OUT0","power","Part of U9's loop-compensation network.","bottom"],
+ ["R12","4.12 kΩ","0402",99.16,73.123,0,"Q2-G/GND","power","On the low-side gate; U9 reads it at start-up to set its over-current limit.","bottom"],
+ ["R13","1.33 kΩ","0402",90.65,64.079,-90,"VDD/C45-Pad1","power","In series with C45 as a feed-forward branch on the feedback divider.","bottom"],
+ ["R14","4.99 kΩ","0402",92.057,64.079,-90,"VDD/OUT0","power","Top of U9's feedback divider (VDD → FB). The DS4432U trims the voltage at this node.","bottom"],
+ ["R15","3.32 kΩ","0402",93.465,64.079,90,"OUT0/GND","power","Bottom of U9's feedback divider (FB → GND).","bottom"],
+ ["R16","80.6 kΩ","0402",116.84,57.11,0,"U10-FS0/GND","power","Sets the full-scale current of the DS4432U's OUT0 channel, and so the range of the core-voltage adjustment.","bottom"]
+];
+const TPS = [["TP1",89.764,114.224,"BO","bottom"],["TP2",122.5,105,"CI","bottom"],["TP3",122.5,107.85,"RO","bottom"],["TP4",122.5,110.65,"RST_N","bottom"],["TP5",84.15,62.35,"VIN","bottom"],["TP6",89.764,119.507,"INV_CLKO","bottom"],["TP7",115.56,121.71,"CLKI","bottom"],["TP8",122.47,118.66,"ADDR0","bottom"],["TP9",122.5,113.43,"BI","bottom"],["TP10",122.5,121.68,"ADDR1","bottom"],["TP12",84.18,75.2,"GND","bottom"],["TP13",98.473,127.736,"1V8","bottom"],["TP14",107.83,129.2,"0V8","bottom"],["TP15",90.3,140.41,"FAN_PWM","bottom"],["TP16",93.61,140.38,"FAN_TACH","bottom"],["TP17",125.5,70.19,"EN","bottom"],["TP18",128.2,60.06,"P_TX","bottom"],["TP19",123.61,84.12,"3V3","bottom"],["TP22",123.64,61.51,"P_RX","bottom"],["TP23",122.556,57.528,"IO0","bottom"],["TP34",110.075,101.7,"VDD1_0","bottom"],["TP35",111.225,99.15,"VDD2_0","bottom"],["TP36",116.87,105.55,"VDD3_0","bottom"],["TP38",87.071,112.7,"NRSTO","bottom"],["TP40",87.071,109.74,"VDD3_1","bottom"],["TP41",89.764,108.13,"VDD2_1","bottom"],["TP42",87.071,106.51,"VDD1_1","bottom"],["TP43",87.071,115.316,"RI","bottom"],["TP44",89.764,116.84,"CLKO","bottom"],["TP45",87.071,117.983,"CO","bottom"],["TP46",87.071,120.828,"PIN_MODE","bottom"]];
+const HOLES = [["H1",126.06,94.91,3.5,"hs"],["H2",84.71,136.36,3.5,"hs"],["H5",126.06,136.36,3.5,"hs"],["H6",84.71,94.91,3.5,"hs"],["H7",130.235,51.121,3,"pad"],["H8",80.808,51.054,3,"pad"],["H9",130.302,143.728,3,"pad"],["H10",80.705,143.831,3,"pad"]];
+const HOLE_TEXT = {"pad": ["Corner mounting hole", "Plated 3 mm mounting hole tied to ground. Used to mount the board on a stand."], "hs": ["Heatsink mounting hole", "3.5 mm hole, one of four on a ~41 mm square around the ASIC. Screws or springs through these clamp the 40 × 40 mm heatsink onto the chip."]};
+
+const FLOWS = [
+ {"id": "core", "name": "Core power 5 V → VDD", "color": "#ff8a3d", "pts": [[87.4, 68.8, "t"], [86, 74, "b"], [82.4, 83.3, "b"], [92, 80, "b"], [98.2, 69.4, "b"], [97.7, 80.1, "b"], [104.6, 82, "b"], [103, 92, "b"], [105.6, 108, "b"], [105.6, 113, "b"], [105.6, 116, "t"]], "n": 24, "speed": 0.22},
+ {"id": "vset", "name": "Voltage set: DS4432U → U9 feedback", "color": "#f08bd0", "pts": [[117.4, 72.6, "t"], [112, 62, "t"], [110.2, 58.1, "b"], [100, 62, "b"], [93, 64, "b"], [98.2, 69.4, "b"]], "n": 8, "speed": 0.25},
+ {"id": "rails", "name": "Logic rails 3V3 · 1V8 · 0V8", "color": "#ffc46b", "multi": [[[90, 70, "b"], [104, 60, "b"], [112.6, 63.4, "b"], [116, 68, "b"], [117.4, 72.6, "t"]], [[94, 90, "b"], [93.8, 129.3, "b"], [104, 124, "b"], [105.6, 119, "t"]], [[96, 90, "b"], [102.3, 130.2, "b"], [106, 123, "b"], [105, 119, "t"]]], "n": 10, "speed": 0.18},
+ {"id": "uart", "name": "ESP32 ⇄ ASIC UART (via U2)", "color": "#4cc9e0", "multi": [[[117.4, 72.6, "t"], [118, 90, "t"], [116.4, 97, "t"], [116.4, 99.3, "b"], [110, 108, "b"], [105.6, 116, "t"]], [[105.6, 116, "t"], [112, 110, "b"], [116.4, 99.3, "b"], [117, 96, "t"], [117, 86, "t"], [117.4, 72.6, "t"]]], "n": 12, "speed": 0.25},
+ {"id": "i2c", "name": "I2C (GPIO47/48)", "color": "#a98bff", "multi": [[[117.4, 72.6, "t"], [112, 62, "b"], [110.2, 58.1, "b"]], [[117.4, 72.6, "t"], [95, 80, "b"], [82.4, 83.3, "b"]], [[117.4, 72.6, "t"], [105, 100, "b"], [101.4, 116, "b"]], [[117.4, 72.6, "t"], [100, 60, "t"], [88, 52, "t"], [87.2, 50.3, "t"]]], "n": 9, "speed": 0.22},
+ {"id": "clk", "name": "25 MHz clock → CLKI", "color": "#e0e36a", "pts": [[115.2, 125, "b"], [111, 121, "b"], [107, 118, "b"], [105.6, 116, "t"]], "n": 8, "speed": 0.5},
+ {"id": "thermal", "name": "Fan control (EMC2101 → fan)", "color": "#ff5d73", "pts": [[101.4, 116, "b"], [96, 130, "b"], [91, 140, "b"], [89.6, 143.6, "t"]], "n": 8, "speed": 0.22},
+ {"id": "usb", "name": "USB-C → ESP32 native USB", "color": "#7ce0a0", "pts": [[80.9, 83.3, "t"], [95, 83, "t"], [108, 78, "t"], [117.4, 72.6, "t"]], "n": 8, "speed": 0.25}
+];
+const TOUR = [
+ {"t": "Meet the Bitaxe Ultra", "side": "iso", "refs": [], "flows": [], "cool": false, "p": ["The Ultra is the 3rd major Bitaxe revision, built around the BM1366 from the Antminer S19 XP. At its 485 MHz default it hashes at about 0.43 TH/s from a 5 V supply.", "Rev 205 shown here uses an older power design than the Supra and Gamma: an analog buck controller whose voltage is trimmed by a current DAC. Use Next to follow it."]},
+ {"t": "5 V in, measured", "side": "bottom", "refs": ["J1", "U8"], "flows": ["core"], "p": ["5 V enters at J1, whose plug-detect switch tells the firmware a supply is connected. The current then passes through U8, an INA260, which measures input voltage, current and power for the dashboard (I2C 0x40)."]},
+ {"t": "An analog buck for the core", "side": "bottom", "refs": ["U9", "Q1", "Q2", "L1", "C46", "C47"], "flows": ["core"], "p": ["U9, a TPS40305, drives two MOSFETs: Q1 switches 5 V in, Q2 clamps the switch node to ground. L1 (150 nH) and the bulk capacitors smooth the result into VDD, about 1.2 V by default.", "The ESP32 can hold the regulator off through Q4, which pulls U9's enable/soft-start pin low."]},
+ {"t": "Setting the voltage with a DAC", "side": "bottom", "refs": ["U10", "R14", "R15", "R16"], "flows": ["vset"], "p": ["The TPS40305 has no digital interface. R14 and R15 form its feedback divider, which alone would give about 1.5 V.", "U10, a DS4432U current DAC (I2C 0x48), pulls a programmable current out of that feedback node, so the regulator settles at a lower voltage. Changing the DAC current is how AxeOS changes core voltage on this board."]},
+ {"t": "I/O rails at 1.8 V", "side": "bottom", "refs": ["U11", "U5", "U6"], "flows": ["rails"], "p": ["U11 makes 3.3 V for the ESP32. U5 and U6 make 1.8 V and 0.8 V for the BM1366's I/O. The BM1366 uses 1.8 V I/O where later chips use 1.2 V."]},
+ {"t": "The BM1366 ASIC", "side": "top", "refs": ["U14"], "flows": [], "cool": false, "p": ["U14 has 894 small cores, so hashrate ≈ frequency × 894. It has no temperature-diode pins, so the firmware reads the chip's internal sensor over UART. Open it in the inspector for the pinout and calculator."]},
+ {"t": "Clock, UART and the ESP32", "side": "iso", "refs": ["U1", "U2", "U12", "Y1"], "flows": ["clk", "uart", "usb"], "p": ["U1 provides the 25 MHz reference. U2, a TXB0104, translates the UART between 3.3 V and 1.8 V, sensing direction on its own. U12 is the ESP32-S3 running ESP-Miner; Y1 is a 32.768 kHz crystal for its real-time clock."]},
+ {"t": "Cooling", "side": "iso", "refs": ["U14", "J4", "U7"], "flows": ["thermal"], "cool": true, "explode": true, "p": ["U7, an EMC2101 placed under the ASIC, drives the fan on J4 and counts its RPM. A 40 × 40 mm heatsink and 5 V fan sit on the chip; active cooling is required."]}
+];
+const ART = {"logo": {"text": "Bitaxe", "sub": "Ultra · 205", "x": 105.13, "y": 92}, "keepout": [105.385, 115.635, 41.4], "traces": {"top": [[[101, 113], [96, 109], [92, 108]], [[110, 113], [115, 109], [120, 108]], [[101, 113.5], [95.7, 109.7], [92, 109.2]], [[110, 113.5], [115.3, 109.7], [120, 109.2]], [[101, 114], [95.4, 110.4], [92, 110.4]], [[110, 114], [115.6, 110.4], [120, 110.4]], [[101, 114.5], [95.1, 111.1], [92, 111.6]], [[110, 114.5], [115.9, 111.1], [120, 111.6]], [[101, 115], [94.8, 111.8], [92, 112.8]], [[110, 115], [116.2, 111.8], [120, 112.8]], [[101, 115.5], [94.5, 112.5], [92, 114]], [[110, 115.5], [116.5, 112.5], [120, 114]], [[101, 116], [94.2, 113.2], [92, 115.2]], [[110, 116], [116.8, 113.2], [120, 115.2]], [[101, 116.5], [93.9, 113.9], [92, 116.4]], [[110, 116.5], [117.1, 113.9], [120, 116.4]], [[101, 117], [93.6, 114.6], [92, 117.6]], [[110, 117], [117.4, 114.6], [120, 117.6]], [[101, 117.5], [93.3, 115.3], [92, 118.8]], [[110, 117.5], [117.7, 115.3], [120, 118.8]], [[101, 118], [93, 116], [92, 120]], [[110, 118], [118, 116], [120, 120]], [[101, 118.5], [92.7, 116.7], [92, 121.2]], [[110, 118.5], [118.3, 116.7], [120, 121.2]], [[101, 119], [92.4, 117.4], [92, 122.4]], [[110, 119], [118.6, 117.4], [120, 122.4]], [[101, 119.5], [92.1, 118.1], [92, 123.6]], [[110, 119.5], [118.9, 118.1], [120, 123.6]], [[101, 120], [91.8, 118.8], [92, 124.8]], [[110, 120], [119.2, 118.8], [120, 124.8]], [[117, 80], [117, 96], [118, 100]], [[112, 72], [100, 80], [93, 90]]], "bottom": [[[98.2, 69.4], [104.6, 82]], [[104.6, 82], [103, 92], [105.6, 104]], [[110.2, 58.1], [98.2, 69.4]], [[82.4, 83.3], [92, 80]], [[93.8, 129.3], [105.6, 119]], [[102.3, 130.2], [105.6, 119]]]}, "silk": {"top": [["RESET", 130.1, 108.4], ["BOOT", 130, 117.1], ["PWM TAC 5V GND", 89.6, 139.5], ["GND VCC SCL SDA", 87.2, 54.4]], "bottom": [["bitaxeUltra · open source · bitaxe.org", 105.4, 145.5]]}};
+const COOLERS = [
+ {"ref": "HS1", "x": 105.385, "y": 115.635, "size": 40, "fins": 13, "finH": 8, "fan": 40, "under": ["U14"], "data": {"short": "Cooler", "name": "Heatsink + 40 mm fan", "group": "thermal", "side": "top", "what": "A 40 × 40 mm aluminium heatsink sits directly on the ASIC with thermal paste and is clamped through the four 3.5 mm holes. A 40 mm 5 V 4-pin PWM fan mounts on top. The project suggests a good paste such as Thermal Grizzly Kryonaut and a quieter fan such as the Noctua NF-A4x10 5V PWM.", "specs": [["Heatsink", "40 × 40 mm aluminium"], ["Fan", "40 mm, 5 V, 4-pin PWM"], ["Interface", "Thermal paste on the chip"]]}}
+];
+return {
+  id:"ultra", tab:"Ultra", title:"Bitaxe Ultra", h1:"Bitaxe <b>Ultra</b> Explorer",
+  sub:"BM1366 · rev 205 KiCad · 56.5 × 99.8 mm · 4-layer",
+  stats:[["Hash", "≈0.43 TH/s", "@485 MHz"], ["Input", "5 V DC", ""], ["Core", "1.2 V", "default"]],
+  topLayer:"B", EDGE, PARTS, PASSIVES, TPS, HOLES, HOLE_TEXT, FLOWS, TOUR, ART, COOLERS,
+  asic:{"chip": "BM1366", "count": 1, "freqs": [400, 425, 450, 475, 485, 500, 525, 550, 575], "def": 485},
+  oled:{"header": "J9", "x": 87.205, "y": 50.292},
+  overview:{"kick": "bitaxeUltra · 3rd major Bitaxe revision", "h2": "A one-chip miner with an analog core supply", "intro": "The Ultra pairs a Bitmain BM1366 (from the Antminer S19 XP) with an ESP32-S3. Its core supply is a TPS40305 buck whose output is trimmed by a DS4432U current DAC, and an INA260 measures input power.", "grid": [["≈0.43 TH/s", "at the 485 MHz default"], ["5 V", "DC input"], ["1.2 V", "default core rail (VDD)"]], "subsystems": [["asic", "BM1366, 25 MHz clock, decoupling ladder"], ["power", "TPS40305 + Q1/Q2, DS4432U DAC, INA260; 3V3, 1V8, 0V8 LDOs"], ["control", "ESP32-S3, TXB0104 level shifter, I2C bus"], ["thermal", "EMC2101 fan controller"], ["io", "Barrel jack with plug sense, USB-C, OLED header, buttons"]], "construction": [["Layers", "4 copper, 1.6 mm FR-4"], ["Rules", "6 mil trace/space, 0.3 mm holes"], ["Copper", "1 oz outer / 0.5 oz inner suggested"], ["Assembly", "Parts on both sides; reflow each side"]], "links": [["bitaxeUltra repo", "https://github.com/bitaxeorg/bitaxeUltra"], ["ESP-Miner", "https://github.com/bitaxeorg/ESP-Miner"]], "note": "Positions, packages and connections come from the published KiCad files (ultra-205 branch). Bodies are simplified; heatsink, fan and OLED are generic stand-ins."},
+  diagram:{
+    caps:[["POWER", 20], ["HASHING", 420], ["CONTROL &amp; I/O", 780]],
+    blocks:[
+ ["J1", 20, 50, 170, 56, "5 V DC input", "J1 · plug sense", "core"],
+ ["U9", 20, 150, 170, 62, "TPS40305", "U9 · buck + Q1/Q2", "core"],
+ ["L1", 20, 250, 170, 56, "L1 + output caps", "150 nH · C46/C47", "core"],
+ ["U11", 220, 50, 160, 56, "3.3 V LDO", "U11 · RT9080", "rails"],
+ ["U5", 220, 150, 160, 56, "1.8 V LDO", "U5 · MCP1824", "rails"],
+ ["U6", 220, 250, 160, 56, "0.8 V LDO", "U6 · MCP1824", "rails"],
+ ["U14", 420, 230, 200, 150, "BM1366 ASIC", "U14 · 894 small cores", "asic"],
+ ["U1", 420, 440, 200, 56, "25 MHz oscillator", "U1 → CLKI", "clk"],
+ ["U2", 660, 150, 160, 62, "Level shifter", "U2 · 3.3 V ⇄ 1.8 V", "uart"],
+ ["U12", 860, 150, 200, 110, "ESP32-S3", "U12 · ESP-Miner / AxeOS", "uart"],
+ ["U7", 660, 440, 160, 62, "EMC2101", "U7 · I2C 0x4C", "thermal"],
+ ["J4", 660, 560, 160, 56, "40 mm 5 V fan", "J4 · PWM + TACH", "thermal"],
+ ["J9", 860, 320, 200, 56, "OLED 128×32", "J9 · I2C 0x3C", "i2c"],
+ ["J8", 860, 50, 200, 56, "USB-C (data only)", "J8 · GPIO19/20", "usb"],
+ ["U10", 860, 420, 200, 56, "DS4432U DAC", "U10 · I2C 0x48", "vset"],
+ ["U8", 860, 520, 200, 56, "INA260", "U8 · I2C 0x40 · power", "i2c"]
+],
+    wires:[
+ ["M105,106 L105,148", "core", "5 V (via INA260)", 112, 132],
+ ["M105,212 L105,248", "core", "SW node", 112, 236],
+ ["M105,306 L105,350 L418,350", "core", "VDD ≈1.2 V", 200, 343],
+ ["M190,78 L218,78", "rails"],
+ ["M190,78 L205,78 L205,178 L218,178", "rails"],
+ ["M205,178 L205,278 L218,278", "rails"],
+ ["M380,178 L400,178 L400,260 L418,260", "rails", "1V8 → VDDIO_18", 404, 222],
+ ["M380,290 L418,290", "rails", "0V8", 386, 284],
+ ["M380,90 L400,90 L400,130 L940,130 L940,148", "rails", "3V3 → ESP32 · U2 · U7 · OLED", 430, 124],
+ ["M520,438 L520,382", "clk", "CLKI", 528, 418],
+ ["M858,185 L822,185", "uart", "TX/RST", 823, 176],
+ ["M660,185 L640,185 L640,280 L622,280", "uart", "CI · NRSTI", 570, 176],
+ ["M622,330 L652,330 L652,205 L660,205", "uart", "RO", 630, 346, true],
+ ["M822,205 L858,205", "uart", "RX", 830, 222, true],
+ ["M900,262 L900,318", "i2c"],
+ ["M880,262 L880,300 L640,300 L640,600 L10,600 L10,181 L18,181", "i2c", "I2C · SDA GPIO47 · SCL GPIO48", 230, 593],
+ ["M880,300 L740,300 L740,438", "i2c"],
+ ["M740,502 L740,558", "thermal", "PWM / TACH", 748, 535],
+ ["M960,106 L960,148", "usb", "USB D+/D−", 968, 122],
+ ["M1060,548 L1092,548 L1092,225 L1062,225", "i2c"],
+ ["M858,448 L845,448 L845,625 L200,625 L200,195 L192,195", "vset", "OUT0 → feedback node", 420, 618]
+],
+    notes:[["Wi-Fi 2.4 GHz → Stratum pool", 872, 232, "usb"]],
+  },
+};
+})());
