@@ -27,7 +27,6 @@ jobs:
         with:
           node-version: 22
 
-      # broken board data (js/data.js, js/boards/) fails the run before anything is deployed
       - name: Check board data
         run: node tools/check-data.js
 
@@ -37,7 +36,7 @@ jobs:
       - name: Pull Vercel project settings
         run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
 
-      # static site: no build step, Vercel packages the files as they are
+      # vite build -> dist/ (framework pinned in vercel.json)
       - name: Build
         run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
 

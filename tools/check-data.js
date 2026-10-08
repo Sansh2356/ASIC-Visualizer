@@ -1,20 +1,17 @@
 #!/usr/bin/env node
-/* Consistency checks for js/data.js and every board in js/boards/. Run: node tools/check-data.js (exits 1 on any problem). */
-"use strict";
-const fs = require('fs'), path = require('path'), vm = require('vm');
+/* Consistency checks for src/data/index.js and every board in src/data/. Run: node tools/check-data.js (exits 1 on any problem). */
+import fs from 'node:fs';
+import '../src/data/boards.js';
+import * as D from '../src/data/index.js';
 
-const js = path.join(__dirname, '..', 'js');
-// the data files are classic browser scripts sharing one global scope; load them the way index.html does
-const html = fs.readFileSync(path.join(js, '..', 'index.html'), 'utf8');
-const boardFiles = [...html.matchAll(/<script src="js\/(boards\/[^"]+)"/g)].map(m=>m[1]);
-const onDisk = fs.readdirSync(path.join(js, 'boards')).filter(f=>f.endsWith('.js')).map(f=>'boards/'+f);
-const ctx = vm.createContext({});
-const src = ['data.js', ...boardFiles].map(f=>fs.readFileSync(path.join(js, f), 'utf8')).join('\n;\n');
-const D = vm.runInContext(src + '\n;({GROUPS,PKG,ASICS,BOARDS})', ctx);
+// every board file on disk must be imported by boards.js, or it silently never registers
+const dir = new URL('../src/data/', import.meta.url);
+const loaded = fs.readFileSync(new URL('boards.js', dir), 'utf8');
+const onDisk = fs.readdirSync(dir).filter(f=>f.endsWith('.js') && !['index.js','boards.js'].includes(f));
 
 const errors = [];
 const err = m => errors.push(m);
-onDisk.filter(f=>!boardFiles.includes(f)).forEach(f=>err(`js/${f} is not loaded by index.html`));
+onDisk.filter(f=>!loaded.includes(`'./${f}'`)).forEach(f=>err(`src/data/${f} is not imported by boards.js`));
 
 const MATS = ['esp','asic','inductor','jack','header','fanconn','button','pads','metal','ic','tdisplay'];
 const FACES = ['+x','-x','+y','-y'];
