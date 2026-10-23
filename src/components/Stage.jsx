@@ -1,7 +1,6 @@
 import { useRef, useEffect } from 'react';
 import { useStore, BOARDS } from '../store/index.js';
 import { useScene } from '../scene/useScene.js';
-import { Tour } from './Tour.jsx';
 import { CompareTable } from './CompareTable.jsx';
 
 function esc(s) { return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
@@ -62,7 +61,6 @@ export function Stage({ sceneRefOut }) {
         Drag to orbit · scroll to zoom · right-drag to pan · click a part
       </div>
       <div id="loading" hidden>BUILDING BOARD…</div>
-      <Tour sceneRef={sceneRef} />
       <div id="diagram" ref={diagramRef} hidden={pane !== 'diag'} />
       <CompareTable />
     </main>

@@ -56,8 +56,11 @@ export const useStore = create(
     // camera view preset
     cameraView: 'iso',
 
-    // theme: 'light' | 'dark'
-    theme: storedTheme() || (systemDark() ? 'dark' : 'light'),
+    // theme: 'light' | 'dark' — default light unless user has pinned dark
+    theme: storedTheme() || 'light',
+
+    // sidebar collapsed state
+    sidebarCollapsed: false,
 
     // actions
     setBoard(boardId) {
@@ -106,6 +109,7 @@ export const useStore = create(
     },
 
     setOption(key, val) { set({ [key]: val }); },
+    toggleSidebar() { set(s => ({ sidebarCollapsed: !s.sidebarCollapsed })); },
 
     toggleTheme() {
       const next = get().theme === 'dark' ? 'light' : 'dark';

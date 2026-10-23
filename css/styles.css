@@ -84,6 +84,10 @@ button { font: inherit; color: inherit }
   grid-template-columns: 280px minmax(0,1fr) 360px;
   grid-template-rows: auto minmax(0,1fr);
   height: 100%;
+  transition: grid-template-columns .22s ease;
+}
+.app.sidebar-collapsed {
+  grid-template-columns: 40px minmax(0,1fr) 360px;
 }
 
 /* ── Header — two-row, 88 px total ──────────────────────── */
@@ -244,11 +248,41 @@ aside.left {
   border-right: 1px solid var(--line);
   background: var(--panel);
   overflow-y: auto;
+  overflow-x: hidden;
   min-height: 0;
   padding: 0 0 30px;
   display: flex;
   flex-direction: column;
+  position: relative;
 }
+
+/* Collapse toggle — sits at the top-right of the sidebar */
+.sidebar-toggle {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  align-self: flex-end;
+  width: 28px;
+  height: 28px;
+  margin: 6px 6px 0 auto;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background .12s, color .12s;
+}
+.sidebar-toggle:hover { background: var(--panel-2); color: var(--fg); }
+
+/* When collapsed — hide all content, show only the toggle */
+.sidebar-collapsed aside.left { padding: 0; }
+.sidebar-collapsed aside.left > *:not(.sidebar-toggle) { display: none; }
+.sidebar-collapsed .sidebar-toggle { margin: 6px auto; }
 aside.right {
   border-left: 1px solid var(--line);
   background: var(--panel);
@@ -469,41 +503,94 @@ main.stage {
   background: #0c100f;
 }
 
-/* ── Guided tour card — white card over dark canvas ─────── */
-.tour {
-  position: absolute;
-  left: 50%;
-  bottom: 16px;
-  transform: translateX(-50%);
-  width: min(600px, calc(100% - 32px));
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 16px 18px 14px;
-  box-shadow: 0 8px 32px rgba(0,0,0,.12), 0 2px 8px rgba(0,0,0,.06);
-  z-index: 4;
+/* ── Guided tour — right panel layout ───────────────────── */
+.tour-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
-.tour .step {
+
+.tour-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px 12px;
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+}
+
+.tour-panel-title {
+  font-family: var(--f-display);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.tour-panel-close {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .12s, color .12s;
+}
+.tour-panel-close:hover { background: var(--panel-2); color: var(--fg); }
+
+.tour-panel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tour-step-label {
   font-family: var(--f-mono);
   font-size: 11px;
   color: var(--gold);
   letter-spacing: .06em;
 }
-.tour h2 {
+
+.tour-step-title {
   font-family: var(--f-display);
   font-size: 18px;
-  margin: 3px 0 6px;
-  text-wrap: balance;
+  margin: 0;
   color: var(--fg);
+  text-wrap: balance;
+  line-height: 1.3;
 }
-.tour p { margin: 0 0 6px; color: var(--muted); font-size: 13.5px; max-width: 68ch }
-.tour .row { display: flex; align-items: center; gap: 10px; margin-top: 10px; flex-wrap: wrap }
-.dots { display: flex; gap: 5px; flex: 1; flex-wrap: wrap }
-.dots button { width: 8px; height: 8px; border-radius: 50%; border: 0; padding: 0; background: var(--line); cursor: pointer }
-.dots button[aria-current="true"] { background: var(--gold-bright) }
 
-.btn.primary { background: var(--gold-bright); color: #fff; border-color: var(--gold-bright); font-weight: 600 }
-.tour .more { font-size: 12.5px; color: var(--c-control); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline }
+.tour-step-body p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+.tour-step-body p + p { margin-top: 6px; }
+
+.tour-panel-nav {
+  display: flex;
+  gap: 8px;
+  padding: 12px 18px 16px;
+  border-top: 1px solid var(--line);
+  flex-shrink: 0;
+}
+.tour-panel-nav .btn { flex: 1; text-align: center; }
+
+.dots { display: flex; gap: 5px; flex-wrap: wrap; }
+.dots button { width: 8px; height: 8px; border-radius: 50%; border: 0; padding: 0; background: var(--line); cursor: pointer; }
+.dots button[aria-current="true"] { background: var(--gold-bright); }
+
+.btn.primary { background: var(--gold-bright); color: #fff; border-color: var(--gold-bright); font-weight: 600; }
 
 /* ── Block diagram ──────────────────────────────────────── */
 #diagram {
@@ -698,11 +785,13 @@ main.stage {
 
 @media (max-width: 1100px) {
   .app { grid-template-columns: 250px minmax(0,1fr) 320px }
+  .app.sidebar-collapsed { grid-template-columns: 40px minmax(0,1fr) 320px }
 }
 
 @media (max-width: 860px) {
   body { overflow: auto }
-  .app { display: flex; flex-direction: column; height: auto; min-height: 100% }
+  .app,
+  .app.sidebar-collapsed { display: flex; flex-direction: column; height: auto; min-height: 100% }
 
   /* Collapse to a single compact header row */
   header.top { flex-direction: row; height: 48px; border-bottom: 1px solid var(--line) }
@@ -713,24 +802,29 @@ main.stage {
   .brand span { display: none }
   .brand h1 { font-size: 15px }
 
-  main.stage { height: 56vh; min-height: 320px; order: 1 }
-  aside.right { order: 2; border-left: 0; border-top: 1px solid var(--line) }
+  /* Canvas full height on mobile; inspector and sidebar scroll below */
+  main.stage { height: 60vh; min-height: 340px; order: 1 }
+  aside.right { order: 2; border-left: 0; border-top: 1px solid var(--line); min-height: 280px }
   aside.left {
     order: 3;
     border-right: 0;
     border-top: 1px solid var(--line);
-    /* let height grow with content in the column layout */
     overflow-y: visible;
     min-height: unset;
+    /* On mobile collapse toggle doesn't make sense — always show content */
+    padding: 0 0 20px;
   }
+  .sidebar-collapsed aside.left > *:not(.sidebar-toggle) { display: unset; }
+  .sidebar-toggle { display: none; }
+
   aside.left section { padding: 12px 16px }
-  /* last section: don't flex-grow in mobile column layout */
   aside.left section:last-child { flex: none }
 
+  /* Tour panel fills the inspector area naturally */
+  .tour-panel { min-height: 260px; }
+  .tour-step-title { font-size: 16px; }
+
   .legend { display: none }
-  .tour { bottom: 8px; padding: 12px 14px }
-  .tour p { font-size: 12.5px }
-  .tour h2 { font-size: 16px }
   .insp { padding: 16px 16px 30px }
 }
 

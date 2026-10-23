@@ -7,6 +7,8 @@ function esc(s) { return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&l
 export function Sidebar({ sceneRef }) {
   const board = useStore(s => BOARDS[s.boardId]);
   const selected = useStore(s => s.selected);
+  const sidebarCollapsed = useStore(s => s.sidebarCollapsed);
+  const { toggleSidebar } = useStore.getState();
   const showLabels = useStore(s => s.showLabels);
   const showPassives = useStore(s => s.showPassives);
   const showOled = useStore(s => s.showOled);
@@ -33,7 +35,15 @@ export function Sidebar({ sceneRef }) {
   const order = ['asic', 'power', 'control', 'thermal', 'io', 'passive', 'test', 'mech'];
 
   return (
-    <aside className="left" aria-label="Controls and component list">
+    <aside className="left" aria-label="Controls and component list" aria-expanded={!sidebarCollapsed}>
+      <button
+        className="sidebar-toggle"
+        onClick={toggleSidebar}
+        aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+      >
+        {sidebarCollapsed ? '›' : '‹'}
+      </button>
       <section>
         <details>
           <summary className="label">Camera</summary>

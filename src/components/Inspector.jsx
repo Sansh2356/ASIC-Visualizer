@@ -1,6 +1,7 @@
 import { Fragment, useState, lazy, Suspense } from 'react';
 import { useStore, BOARDS } from '../store/index.js';
 import { GROUPS, ASICS, partCount } from '../data/index.js';
+import { Tour } from './Tour.jsx';
 
 const HashEngine = lazy(() => import('../hash/HashEngine.jsx').then(m => ({ default: m.HashEngine })));
 
@@ -13,12 +14,18 @@ export function Inspector({ sceneRef }) {
   const board = BOARDS[boardId];
   const selected = useStore(s => s.selected);
   const objs = useStore(s => s._objs);
+  const mode = useStore(s => s.mode);
   const { select, setMode } = useStore.getState();
 
   const handleSelect = (r, fly = false) => {
     select(r);
     sceneRef?.current?.select(r, { fly });
   };
+
+  // Tour takes over the right panel — canvas stays clear
+  if (mode === 'tour') {
+    return <Tour sceneRef={sceneRef} />;
+  }
 
   if (!selected || !objs[selected]) {
     return (

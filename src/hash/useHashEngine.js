@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { sha256Trace, dsha256, buildHeader, headerWithNonce, leadingZeroBits, toHex, GENESIS } from './sha256.js';
 
 const DEFAULT_FIELDS = { ...GENESIS };
@@ -18,36 +18,27 @@ export function useHashEngine() {
   const [hashRate, setHashRate] = useState(0);
   const [found, setFound]       = useState(null);     // { nonce, hash } or null
 
-  // Trace: computed once per (fields, pass)
-  const trace = useRef(null);
-  const pass1Hash = useRef(null);  // 32-byte result of first SHA-256
-
-  const rebuildTrace = useCallback(() => {
+  // Trace: always fresh — useMemo ensures no stale read on the render after a field change
+  const trace = useMemo(() => {
     const header = buildHeader({ ...fields, nonce: fields.nonce });
-    if (pass === 0) {
-      trace.current = sha256Trace(header);
-    } else {
-      if (!pass1Hash.current) {
-        const { finalHash } = sha256Trace(header);
-        const hashBytes = new Uint8Array(32);
-        const dv = new DataView(hashBytes.buffer);
-        finalHash.forEach((v, i) => dv.setUint32(i * 4, v, false));
-        pass1Hash.current = hashBytes;
-      }
-      trace.current = sha256Trace(pass1Hash.current);
-    }
+    if (pass === 0) return sha256Trace(header);
+    // Pass 2: hash the output of pass 1
+    const { finalHash } = sha256Trace(header);
+    const pass1Bytes = new Uint8Array(32);
+    const dv = new DataView(pass1Bytes.buffer);
+    finalHash.forEach((v, i) => dv.setUint32(i * 4, v, false));
+    return sha256Trace(pass1Bytes);
   }, [fields, pass]);
 
+  // Reset position when the trace changes
   useEffect(() => {
-    pass1Hash.current = null;
-    rebuildTrace();
     setBlockIdx(0); setRound(0); setPlaying(false);
-  }, [fields, pass]);
+  }, [trace]);
 
   // Derived from trace
-  const currentBlock = trace.current?.blocks[blockIdx];
+  const currentBlock = trace.blocks[blockIdx];
   const currentStep  = currentBlock?.rounds[round];
-  const totalBlocks  = trace.current?.blocks.length ?? 0;
+  const totalBlocks  = trace.blocks.length;
   const totalRounds  = currentBlock?.rounds.length ?? 64;
 
   // Playback
@@ -124,7 +115,7 @@ export function useHashEngine() {
     stepForward, stepBack, reset,
     currentStep, currentBlock,
     totalBlocks, totalRounds,
-    trace: trace.current,
+    trace,
 
     // mine
     difficulty, setDifficulty,
