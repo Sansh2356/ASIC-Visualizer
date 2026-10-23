@@ -76,6 +76,8 @@ export const useStore = create(
         cameraView: 'iso',
         showCool: false,
         explode: false,
+        mode: 'free',
+        tourIdx: 0,
       });
       document.title = `ASIC Visualizer — ${B.title}`;
       const hash = boardId;
