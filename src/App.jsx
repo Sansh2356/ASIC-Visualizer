@@ -25,28 +25,16 @@ export function App() {
     return () => window.removeEventListener('hashchange', onHash);
   }, []);
 
-  // Sync OS theme preference changes when no preference is pinned
-  useEffect(() => {
-    const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    const onChange = e => {
-      if (!localStorage.getItem('asicv-theme')) {
-        const dark = e.matches;
-        document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
-        useStore.setState({ theme: dark ? 'dark' : 'light' });
-      }
-    };
-    mq.addEventListener('change', onChange);
-    return () => mq.removeEventListener('change', onChange);
-  }, []);
-
   // Apply theme attribute whenever store theme changes
   const theme = useStore(s => s.theme);
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
 
+  const sidebarCollapsed = useStore(s => s.sidebarCollapsed);
+
   return (
-    <div className="app">
+    <div className={`app${sidebarCollapsed ? ' sidebar-collapsed' : ''}`}>
       <Header />
       <Sidebar sceneRef={sceneRef} />
       <Stage sceneRefOut={sceneRef} />

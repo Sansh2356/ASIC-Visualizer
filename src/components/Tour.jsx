@@ -8,8 +8,6 @@ export function Tour({ sceneRef }) {
   const tourIdx = useStore(s => s.tourIdx);
   const { setMode, setTourIdx } = useStore.getState();
 
-  const hidden = mode !== 'tour';
-
   useEffect(() => {
     if (mode !== 'tour' || !board || !sceneRef?.current) return;
     const sc = sceneRef.current;
@@ -43,7 +41,7 @@ export function Tour({ sceneRef }) {
     return () => window.removeEventListener('keydown', onKey);
   }, [mode, tourIdx]);
 
-  if (!board || hidden) return null;
+  if (!board || mode !== 'tour') return null;
 
   const TOUR = board.TOUR;
   const s = TOUR[tourIdx];
@@ -53,18 +51,30 @@ export function Tour({ sceneRef }) {
   const next = () => { if (tourIdx >= TOUR.length - 1) setMode('free'); else goStep(tourIdx + 1); };
 
   return (
-    <div className="tour">
-      <div className="step">STEP {tourIdx + 1} / {TOUR.length}</div>
-      <h2>{s.t}</h2>
-      <div>{s.p.map((t, i) => <p key={i}>{t}</p>)}</div>
-      <div className="row">
+    <div className="tour-panel">
+      <div className="tour-panel-header">
+        <span className="tour-panel-title">Guided Tour</span>
+        <button className="tour-panel-close" onClick={() => setMode('free')} aria-label="Exit tour">✕</button>
+      </div>
+
+      <div className="tour-panel-body">
+        <div className="tour-step-label">Step {tourIdx + 1} of {TOUR.length}</div>
         <div className="dots">
           {TOUR.map((_, k) => (
             <button key={k} aria-label={`Go to step ${k + 1}`} aria-current={k === tourIdx} onClick={() => goStep(k)} />
           ))}
         </div>
-        <button className="btn" disabled={tourIdx === 0} onClick={() => goStep(tourIdx - 1)}>Back</button>
-        <button className="btn primary" onClick={next}>{tourIdx === TOUR.length - 1 ? 'Finish' : 'Next'}</button>
+        <h2 className="tour-step-title">{s.t}</h2>
+        <div className="tour-step-body">
+          {s.p.map((t, i) => <p key={i}>{t}</p>)}
+        </div>
+      </div>
+
+      <div className="tour-panel-nav">
+        <button className="btn" disabled={tourIdx === 0} onClick={() => goStep(tourIdx - 1)}>← Back</button>
+        <button className="btn primary" onClick={next}>
+          {tourIdx === TOUR.length - 1 ? 'Finish' : 'Next →'}
+        </button>
       </div>
     </div>
   );
