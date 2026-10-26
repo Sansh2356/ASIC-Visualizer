@@ -159,22 +159,20 @@ export class Scene {
   getObjs() { return this.objs; }
   partCountForBoard() { return this.B ? partCount(this.B) : 0; }
 
-  // Briefly flash the ASIC chip mesh with a tint color (hex number, e.g. 0x00ff88).
-  // durationMs defaults to 200ms. Called by the SHA-256 hash engine on each round tick.
+  // Briefly flash every ASIC chip with a tint color (hex number, e.g. 0x00ff88).
+  // Called by the SHA-256 hash engine on each round tick. Overlapping pulses are
+  // counted; when the last one ends, _applyHighlight restores the correct state.
   pulseAsic(color = 0x00ff88, durationMs = 180) {
-    const asicObj = Object.values(this.objs).find(o => o.data?.mat === 'asic');
-    if (!asicObj?.mesh) return;
-    const mesh = asicObj.mesh;
-    const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-    const origColors = mats.map(m => m.emissive?.getHex?.() ?? 0);
-    const origIntensities = mats.map(m => m.emissiveIntensity ?? 0);
-    const col = new THREE.Color(color);
-    mats.forEach(m => { if (m.emissive) { m.emissive.set(col); m.emissiveIntensity = 0.6; } });
-    setTimeout(() => {
-      mats.forEach((m, i) => {
-        if (m.emissive) { m.emissive.setHex(origColors[i]); m.emissiveIntensity = origIntensities[i]; }
-      });
-    }, durationMs);
+    const mats = Object.values(this.objs)
+      .filter(o => o.data?.mat === 'asic')
+      .flatMap(o => o.meshes.flatMap(m => Array.isArray(m.material) ? m.material : [m.material]))
+      .filter(m => m.emissive);
+    if (!mats.length) return;
+    if (mats.some(m => !m.userData.orig)) this._applyHighlight(); // capture originals before tinting
+    const col = new THREE.Color(color).multiplyScalar(0.6);
+    mats.forEach(m => m.emissive.copy(col));
+    this._pulses = (this._pulses || 0) + 1;
+    setTimeout(() => { if (--this._pulses === 0) this._applyHighlight(); }, durationMs);
   }
 
   destroy() {
