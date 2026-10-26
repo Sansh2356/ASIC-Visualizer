@@ -149,8 +149,10 @@ function MineTab({ eng }) {
 
       {found && (
         <div className="he-found">
-          <div className="he-found-title">✓ Block found!</div>
+          <div className="he-found-title">✓ Share found!</div>
           <div><span>Nonce</span><code>{found.nonce.toLocaleString()}</code></div>
+          <div><span>Difficulty</span><code>{difficulty} bits</code></div>
+          <div className="he-found-note">A share, not a block: network target ≈ 73 bits</div>
           <div className="he-found-hash">
             <span>Hash</span>
             <code className="he-hash-val">{found.hash}</code>
