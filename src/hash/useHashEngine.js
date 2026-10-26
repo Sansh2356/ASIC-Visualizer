@@ -83,7 +83,7 @@ export function useHashEngine() {
         hashes++;
         // Bitcoin displays hashes byte-reversed; check difficulty on display-order bytes
         if (leadingZeroBits(hash.slice().reverse()) >= difficulty) {
-          setFound({ nonce: n, hash: toHex(hash) });
+          setFound({ nonce: n, hash: toHex(hash.slice().reverse()) });
           setNonce(n);
           setMining(false);
           // Pulse scene ASIC on discovery
