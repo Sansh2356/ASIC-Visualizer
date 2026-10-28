@@ -18,6 +18,17 @@ export function applyStep(sc, board, s) {
   else sc.frameRefs(refs, s.side);
 }
 
+// Undo applyStep: put the scene back the way the free-mode toggles say.
+export function resetStep(sc) {
+  const st = useStore.getState();
+  sc.applyHighlightForTour([], st.selected);
+  sc.setCoolVisible(st.showCool);
+  sc.state.explodeTarget = st.explode ? 1 : 0;
+  sc.applyFlows(st.activeFlows);
+  sc.setPassivesVisible(st.showPassives);
+  if (sc.B?.oled) sc.setOledVisible(st.showOled);
+}
+
 export function Tour({ sceneRef }) {
   const boardId = useStore(s => s.boardId);
   const board = BOARDS[boardId];
@@ -32,6 +43,8 @@ export function Tour({ sceneRef }) {
 
     applyStep(sceneRef.current, board, s);
   }, [mode, tourIdx, boardId]);
+
+  useEffect(() => () => { if (sceneRef?.current) resetStep(sceneRef.current); }, []);
 
   useEffect(() => {
     const onKey = e => {

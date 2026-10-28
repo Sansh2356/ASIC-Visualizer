@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useStore, BOARDS } from '../store/index.js';
 import { stepsFor, placedAt, partQA } from '../data/assembly.js';
-import { applyStep } from './Tour.jsx';
+import { applyStep, resetStep } from './Tour.jsx';
 
 const key = id => `asicv-asm-${id}`;
 function loadProgress(id) {
@@ -39,15 +39,10 @@ export function Assembly({ sceneRef }) {
 
   // Leaving assembly mode: put the scene back the way the free-mode toggles say.
   useEffect(() => () => {
-    const sc = sceneRef?.current, st = useStore.getState();
+    const sc = sceneRef?.current;
     if (!sc) return;
     sc.setTray(null);
-    sc.applyHighlightForTour([], st.selected);
-    sc.setCoolVisible(st.showCool);
-    sc.setPassivesVisible(st.showPassives);
-    if (sc.B?.oled) sc.setOledVisible(st.showOled);
-    sc.state.explodeTarget = st.explode ? 1 : 0;
-    sc.applyFlows(st.activeFlows);
+    resetStep(sc);
   }, []);
 
   const goStep = i => setProg(p => ({ ...p, idx: Math.max(0, Math.min(steps.length - 1, i)) }));
