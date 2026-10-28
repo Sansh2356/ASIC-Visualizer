@@ -167,6 +167,7 @@ export class Scene {
       this._applyPassives(true);
       if (this.B.oled) this.oledGroup.visible = true;
     }
+    this._applyHighlight();
   }
 
   // Frame the tray slots and footprints of `keys`, or the whole board and tray.
@@ -560,7 +561,7 @@ export class Scene {
       cx += w + gap; row = Math.max(row, d);
     });
     const depth = cz + row + gap - (-B.BH / 2 - gap);
-    this.trayPlate = new THREE.Mesh(new THREE.BoxGeometry(TW + gap * 2, 0.8, depth), new THREE.MeshStandardMaterial({ color: 0x2a2f33, roughness: .9 }));
+    this.trayPlate = new THREE.Mesh(new THREE.BoxGeometry(TW + gap * 2, 0.8, depth), new THREE.MeshStandardMaterial({ color: 0x141b18, roughness: .9 }));
     this.trayPlate.position.set(x0 + TW / 2, this.SURF_T - 0.45, -B.BH / 2 - gap + depth / 2);
     this.trayPlate.receiveShadow = true;
     this.boardGroup.add(this.trayPlate);
@@ -709,7 +710,9 @@ export class Scene {
   _applyHighlight() {
     const set = this.state.highlight, sel = this.state.selected;
     Object.entries(this.objs).forEach(([ref, o]) => {
-      const on = !set || set.includes(ref) || ref === sel;
+      // Parts still waiting in the assembly tray stay at full colour.
+      const waiting = this.tray && this.trayPos[ref] && !this.tray.has(ref);
+      const on = !set || set.includes(ref) || ref === sel || waiting;
       const isSel = ref === sel || (set && set.includes(ref));
       o.meshes.forEach(m => {
         const mats = Array.isArray(m.material) ? m.material : [m.material];
