@@ -2,6 +2,10 @@ import { Fragment, useState, lazy, Suspense } from 'react';
 import { useStore, BOARDS } from '../store/index.js';
 import { GROUPS, ASICS, partCount } from '../data/index.js';
 import { Tour } from './Tour.jsx';
+import { Assembly } from './Assembly.jsx';
+import { ASSEMBLY, partQA } from '../data/assembly.js';
+
+const ASSEMBLY_BOARDS = new Set(Object.keys(ASSEMBLY));
 
 const HashEngine = lazy(() => import('../hash/HashEngine.jsx').then(m => ({ default: m.HashEngine })));
 
@@ -26,6 +30,9 @@ export function Inspector({ sceneRef }) {
   if (mode === 'tour') {
     return <Tour sceneRef={sceneRef} />;
   }
+  if (mode === 'assembly') {
+    return <Assembly sceneRef={sceneRef} />;
+  }
 
   if (!selected || !objs[selected]) {
     return (
@@ -33,6 +40,7 @@ export function Inspector({ sceneRef }) {
         <Overview
           board={board}
           onStartTour={() => setMode('tour')}
+          onStartAssembly={() => setMode('assembly')}
           onOpenAsic={() => {
             const asic = board?.PARTS.find(p => p.mat === 'asic');
             if (asic) handleSelect(asic.ref, true);
@@ -55,43 +63,7 @@ export function Inspector({ sceneRef }) {
       </div>
       <h2>{d.name}</h2>
       {d.part && <div className="pn">{d.part}{d.pkg ? ' · ' + d.pkg : ''}</div>}
-      {d.dnp && <p className="note">Not populated in the BOM. The footprint is a design option.</p>}
-      <h3>What it does</h3>
-      <p>{d.what || ''}</p>
-      {d.how && <><h3>How it works on the {board?.tab}</h3><p>{d.how}</p></>}
-      {d.specs?.length > 0 && (
-        <>
-          <h3>Key facts</h3>
-          <dl className="kv">
-            {d.specs.map(([k, v]) => (
-              <Fragment key={k}><dt>{k}</dt><dd>{v}</dd></Fragment>
-            ))}
-          </dl>
-        </>
-      )}
-      {d.nets && (
-        <><h3>Connected nets</h3><div className="nets">{d.nets.map(n => <span key={n}>{n}</span>)}</div></>
-      )}
-      {d.netsStr && !d.nets && (
-        <><h3>Connected nets</h3><div className="nets">{d.netsStr.split('/').map(n => <span key={n}>{n}</span>)}</div></>
-      )}
-      {d.mat === 'asic' && board && (
-        <>
-          <AsicExtras board={board} />
-          <Suspense fallback={<div style={{ padding: '10px', color: 'var(--c-fg2)', fontSize: 12 }}>Loading SHA-256 engine…</div>}>
-            <HashEngine />
-          </Suspense>
-        </>
-      )}
-      {d.note && <p className="note">{d.note}</p>}
-      {d.links && (
-        <><h3>Source</h3><div className="links">{d.links.map(([t, u]) => <a key={u} href={u} target="_blank" rel="noopener">{t} ↗</a>)}</div></>
-      )}
-      <h3>Board position</h3>
-      <dl className="kv">
-        <dt>KiCad X, Y</dt><dd>{(+d.x).toFixed(2)}, {(+d.y).toFixed(2)} mm</dd>
-        {d.rot !== undefined && <Fragment key="rot"><dt>Rotation</dt><dd>{d.rot}°</dd></Fragment>}
-      </dl>
+      <PartTabs key={selected} d={d} board={board} boardId={boardId} />
       <p style={{ marginTop: 14 }}>
         <button className="btn" onClick={() => handleSelect(null)}>← Board overview</button>
       </p>
@@ -99,7 +71,7 @@ export function Inspector({ sceneRef }) {
   );
 }
 
-function Overview({ board, onStartTour, onOpenAsic }) {
+function Overview({ board, onStartTour, onOpenAsic, onStartAssembly }) {
   if (!board) return null;
   const O = board.overview;
   const pCount = partCount(board);
@@ -127,7 +99,8 @@ function Overview({ board, onStartTour, onOpenAsic }) {
       <h3>Start here</h3>
       <p>
         <button className="btn primary" onClick={onStartTour}>Start guided tour</button>{' '}
-        <button className="btn" onClick={onOpenAsic}>Open the ASIC</button>
+        <button className="btn" onClick={onOpenAsic}>Open the ASIC</button>{' '}
+        <button className="btn" onClick={onStartAssembly}>Assembly guide</button>
       </p>
       <h3>PCB construction</h3>
       <dl className="kv">
@@ -145,7 +118,7 @@ function Overview({ board, onStartTour, onOpenAsic }) {
   );
 }
 
-function AsicExtras({ board }) {
+function AsicCalc({ board }) {
   const { freqs, def, count, chip } = board.asic;
   const A = ASICS[chip];
   const [fqIdx, setFqIdx] = useState(freqs.indexOf(def));
@@ -170,8 +143,6 @@ function AsicExtras({ board }) {
           PLL ×{pll} from {A.clock} MHz clock. Presets: {freqs.join(', ')} MHz.
         </small>
       </div>
-      <h3>Pinout (from the KiCad footprint)</h3>
-      <div className="pinout" dangerouslySetInnerHTML={{ __html: pinoutSVG(board) }} />
     </>
   );
 }
@@ -207,4 +178,79 @@ function pinoutSVG(board) {
   s += `</svg>`;
   s += `<p style="font-size:12px;color:var(--muted);margin-top:6px"><span style="color:var(--c-control)">■</span> control · <span style="color:${colors.clk}">■</span> clock · <span style="color:${colors.io}">■</span> I/O rails · <span style="color:var(--c-power)">■</span> domain taps · <span style="color:var(--c-thermal)">■</span> temp diode · <span style="color:var(--muted)">■</span> straps · <span style="color:var(--c-io)">■</span> chain outputs</p>`;
   return s;
+}
+
+function PartTabs({ d, board, boardId }) {
+  const steps = partQA(boardId, d.ref);
+  const isAsic = d.mat === 'asic' && board;
+  const nets = d.nets || d.netsStr?.split('/');
+  const tabs = [
+    ['overview', 'Overview'],
+    (isAsic || nets) && ['pinout', 'Pinout'],
+    ['assembly', 'Assembly'],
+    ['specs', 'Specs'],
+  ].filter(Boolean);
+  const [tab, setTab] = useState('overview');
+
+  return (
+    <>
+      <div className="tabs" role="tablist">
+        {tabs.map(([id, label]) => (
+          <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)}>{label}</button>
+        ))}
+      </div>
+      {tab === 'overview' && (
+        <>
+          {d.dnp && <p className="note">Not populated in the BOM. The footprint is a design option.</p>}
+          <h3>What it does</h3>
+          <p>{d.what || ''}</p>
+          {d.how && <><h3>How it works on the {board?.tab}</h3><p>{d.how}</p></>}
+          {isAsic && (
+            <>
+              <AsicCalc board={board} />
+              <Suspense fallback={<div style={{ padding: '10px', color: 'var(--c-fg2)', fontSize: 12 }}>Loading SHA-256 engine…</div>}>
+                <HashEngine />
+              </Suspense>
+            </>
+          )}
+          {d.note && <p className="note">{d.note}</p>}
+          {d.links && (
+            <><h3>Source</h3><div className="links">{d.links.map(([t, u]) => <a key={u} href={u} target="_blank" rel="noopener">{t} ↗</a>)}</div></>
+          )}
+        </>
+      )}
+      {tab === 'pinout' && (
+        <>
+          {isAsic && <><h3>Pinout (from the KiCad footprint)</h3><div className="pinout" dangerouslySetInnerHTML={{ __html: pinoutSVG(board) }} /></>}
+          {nets && <><h3>Connected nets</h3><div className="nets">{nets.map(n => <span key={n}>{n}</span>)}</div></>}
+        </>
+      )}
+      {tab === 'assembly' && (
+        steps.length ? steps.map(st => (
+          <Fragment key={st.t}>
+            <h3>{st.t}</h3>
+            <ul className="asm-do">{st.do.map((t, i) => <li key={i}>{t}</li>)}</ul>
+            {[...st.qa, ...st.fix].map(([q, a]) => <details key={q}><summary>{q}</summary><p>{a}</p></details>)}
+          </Fragment>
+        )) : <p className="note">No assembly notes for this part{ASSEMBLY_BOARDS.has(boardId) ? '' : ' (this board has no assembly guide yet)'}.</p>
+      )}
+      {tab === 'specs' && (
+        <>
+          {d.specs?.length > 0 && (
+            <>
+              <h3>Key facts</h3>
+              <dl className="kv">
+                {d.specs.map(([k, v]) => <Fragment key={k}><dt>{k}</dt><dd>{v}</dd></Fragment>)}
+              </dl>
+            </>
+          )}
+          <h3>Board position</h3>
+          <dl className="kv">
+            <dt>KiCad X, Y</dt><dd>{(+d.x).toFixed(2)}, {(+d.y).toFixed(2)} mm</dd>
+            {d.rot !== undefined && <Fragment key="rot"><dt>Rotation</dt><dd>{d.rot}°</dd></Fragment>}
+          </dl>
+        </>
+      )}
+    </>
+  );
 }

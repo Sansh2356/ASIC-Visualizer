@@ -1,6 +1,23 @@
 import { useEffect } from 'react';
 import { useStore, BOARDS } from '../store/index.js';
 
+// Highlight and frame a step's parts. Shared by the tour and assembly mode.
+export function applyStep(sc, board, s) {
+  sc.state.explodeTarget = s.explode ? 1 : 0;
+  sc.setCoolVisible(!!s.cool);
+  sc.applyFlows(s.flows);
+  const refs = s.refs || [];
+  const cool = !!s.cool;
+  const highlight = refs.length ? refs.slice() : null;
+  const highlighted = cool ? refs.concat(board.COOLERS.map(c => c.ref)) : highlight;
+  sc.applyHighlightForTour(highlighted || [], refs[0] || null);
+
+  if (refs.some(r => sc.getObjs()[r]?.isPassive)) sc.setPassivesVisible(true);
+  if (cool) sc.frameCooler();
+  else if (s.side === 'iso' && !refs.length) sc.setView('iso');
+  else sc.frameRefs(refs, s.side);
+}
+
 export function Tour({ sceneRef }) {
   const boardId = useStore(s => s.boardId);
   const board = BOARDS[boardId];
@@ -10,24 +27,10 @@ export function Tour({ sceneRef }) {
 
   useEffect(() => {
     if (mode !== 'tour' || !board || !sceneRef?.current) return;
-    const sc = sceneRef.current;
-    const TOUR = board.TOUR;
-    const s = TOUR[tourIdx];
+    const s = board.TOUR[tourIdx];
     if (!s) return;
 
-    sc.state.explodeTarget = s.explode ? 1 : 0;
-    sc.setCoolVisible(!!s.cool);
-    sc.applyFlows(s.flows);
-    const refs = s.refs || [];
-    const cool = !!s.cool;
-    const highlight = refs.length ? refs.slice() : null;
-    const highlighted = cool ? refs.concat(board.COOLERS.map(c => c.ref)) : highlight;
-    sc.applyHighlightForTour(highlighted || [], refs[0] || null);
-
-    if (refs.some(r => sc.getObjs()[r]?.isPassive)) sc.setPassivesVisible(true);
-    if (cool) sc.frameCooler();
-    else if (s.side === 'iso' && !refs.length) sc.setView('iso');
-    else sc.frameRefs(refs, s.side);
+    applyStep(sceneRef.current, board, s);
   }, [mode, tourIdx, boardId]);
 
   useEffect(() => {

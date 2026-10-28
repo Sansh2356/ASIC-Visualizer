@@ -1,0 +1,127 @@
+import { useEffect, useState } from 'react';
+import { useStore, BOARDS } from '../store/index.js';
+import { ASSEMBLY, partQA } from '../data/assembly.js';
+import { applyStep } from './Tour.jsx';
+
+const key = id => `asicv-asm-${id}`;
+function loadProgress(id) {
+  try { return { idx: 0, done: [], ...JSON.parse(localStorage.getItem(key(id))) }; }
+  catch { return { idx: 0, done: [] }; }
+}
+
+export function Assembly({ sceneRef }) {
+  const boardId = useStore(s => s.boardId);
+  const board = BOARDS[boardId];
+  const selected = useStore(s => s.selected);
+  const objs = useStore(s => s._objs);
+  const { setMode, select } = useStore.getState();
+  const steps = ASSEMBLY[boardId];
+
+  const [prog, setProg] = useState(() => loadProgress(boardId));
+  useEffect(() => { setProg(loadProgress(boardId)); }, [boardId]);
+  useEffect(() => {
+    try { localStorage.setItem(key(boardId), JSON.stringify(prog)); } catch {}
+  }, [prog]);
+
+  const idx = Math.min(prog.idx, (steps?.length || 1) - 1);
+  const s = steps?.[idx];
+
+  useEffect(() => {
+    const sc = sceneRef?.current;
+    if (!sc || !s) return;
+    select(null);
+    applyStep(sc, board, s);
+  }, [idx, boardId, !!steps]);
+
+  // Leaving assembly mode: put the scene back the way the free-mode toggles say.
+  useEffect(() => () => {
+    const sc = sceneRef?.current, st = useStore.getState();
+    if (!sc) return;
+    sc.applyHighlightForTour([], st.selected);
+    sc.setCoolVisible(st.showCool);
+    sc.state.explodeTarget = st.explode ? 1 : 0;
+    sc.applyFlows(st.activeFlows);
+  }, []);
+
+  const goStep = i => setProg(p => ({ ...p, idx: Math.max(0, Math.min(steps.length - 1, i)) }));
+  const toggleDone = i => setProg(p => ({ ...p, done: p.done.includes(i) ? p.done.filter(d => d !== i) : [...p.done, i] }));
+
+  const header = (
+    <div className="tour-panel-header">
+      <span className="tour-panel-title">Assembly · {board?.tab}</span>
+      <button className="tour-panel-close" onClick={() => setMode('free')} aria-label="Exit assembly">✕</button>
+    </div>
+  );
+
+  if (!steps) {
+    return (
+      <div className="tour-panel">
+        {header}
+        <div className="tour-panel-body">
+          <p className="note">No assembly guide for the {board?.title} yet. Guides exist for the Gamma, Gamma Hex and NerdQAxe++.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const part = selected && objs[selected]?.data;
+  const partSteps = part ? partQA(boardId, selected) : [];
+
+  return (
+    <div className="tour-panel">
+      {header}
+      <div className="tour-panel-body">
+        <div className="asm-progress">
+          <span className="tour-step-label">Step {idx + 1}/{steps.length}</span>
+          <span className="asm-count">{prog.done.length}/{steps.length} done</span>
+        </div>
+        <ol className="asm-list">
+          {steps.map((st, k) => (
+            <li key={k} aria-current={k === idx} className={prog.done.includes(k) ? 'done' : ''}>
+              <input type="checkbox" checked={prog.done.includes(k)} onChange={() => toggleDone(k)} aria-label={`Mark "${st.t}" done`} />
+              <button onClick={() => goStep(k)}>{st.t}</button>
+            </li>
+          ))}
+        </ol>
+
+        {part && (
+          <div className="asm-part">
+            <div className="asm-part-head">
+              <b>{part.ref}</b> {part.name}
+              <button className="tour-panel-close" onClick={() => select(null)} aria-label="Close part questions">✕</button>
+            </div>
+            {partSteps.length
+              ? partSteps.map(st => <QA key={st.t} qa={st.qa} fix={st.fix} title={st.t} />)
+              : <p>{part.what || 'No assembly questions for this part.'}</p>}
+          </div>
+        )}
+
+        <h2 className="tour-step-title">{s.t}</h2>
+        <ol className="asm-do">{s.do.map((t, i) => <li key={i}>{t}</li>)}</ol>
+        <label className="asm-check">
+          <input type="checkbox" checked={prog.done.includes(idx)} onChange={() => toggleDone(idx)} /> Done
+        </label>
+        <QA qa={s.qa} fix={s.fix} />
+        <p className="asm-tip">Click any part on the board to see questions about it.</p>
+      </div>
+      <div className="tour-panel-nav">
+        <button className="btn" disabled={idx === 0} onClick={() => goStep(idx - 1)}>← Back</button>
+        <button className="btn primary" disabled={idx === steps.length - 1} onClick={() => { if (!prog.done.includes(idx)) toggleDone(idx); goStep(idx + 1); }}>
+          Done, next →
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function QA({ qa, fix, title }) {
+  return (
+    <>
+      {title && <div className="asm-from">From “{title}”</div>}
+      {qa.length > 0 && <h3>Common questions</h3>}
+      {qa.map(([q, a]) => <details key={q}><summary>{q}</summary><p>{a}</p></details>)}
+      {fix.length > 0 && <h3>Troubleshooting</h3>}
+      {fix.map(([q, a]) => <details key={q} className="fix"><summary>{q}</summary><p>{a}</p></details>)}
+    </>
+  );
+}
