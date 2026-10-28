@@ -97,6 +97,7 @@ export class Scene {
     this.B = board;
     this.state.explodeTarget = 0; this.state.explode = 0;
     this.state.selected = null; this.state.highlight = null;
+    this.tray = null; this.trayPos = null;
     this.MIRROR = board.topLayer === 'B';
     this.SURF_T = board.BT / 2; this.SURF_B = -board.BT / 2;
     this.controls.maxDistance = 420 * Math.max(1, this._sizeK());
@@ -152,6 +153,35 @@ export class Scene {
   setColorBy(v) { this.state.colorBy = v; this._applyHighlight(); }
 
   frameRefs(refs, side) { this._frameRefs(refs, side); }
+
+  // Assembly tray: every populated part waits in a grid beside the board and glides
+  // onto its footprint once placed. placed = Set of refs (a cooler's fan is
+  // '<ref>:fan'), or null to send everything home and hide the tray.
+  setTray(placed) {
+    if (placed && !this.trayPos) this._layoutTray();
+    this.tray = placed;
+    if (!this.trayPos) return;
+    this.trayPlate.visible = !!placed;
+    if (placed) {
+      this.coolGroup.visible = true;
+      this._applyPassives(true);
+      if (this.B.oled) this.oledGroup.visible = true;
+    }
+  }
+
+  // Frame the tray slots and footprints of `keys`, or the whole board and tray.
+  frameTray(keys, side) {
+    const box = new THREE.Box3();
+    const list = keys?.length ? keys.filter(k => this.trayPos[k]) : Object.keys(this.trayPos);
+    list.forEach(k => {
+      const t = this.trayPos[k];
+      box.expandByPoint(new THREE.Vector3(t.tx, t.ty, t.tz));
+      box.expandByPoint(new THREE.Vector3(t.wx, this.SURF_T, t.wz));
+    });
+    if (!keys?.length) box.expandByPoint(new THREE.Vector3(-this.B.BW / 2, 0, -this.B.BH / 2));
+    if (box.isEmpty()) return;
+    this._frameBox(box, side === 'bottom' ? 'bottom' : 'top', 1.4);
+  }
   frameCooler() { this._frameCooler(); }
 
   getFlowObjs() { return this.flowObjs; }
@@ -504,6 +534,57 @@ export class Scene {
     });
   }
 
+  _layoutTray() {
+    const B = this.B, gap = 3, x0 = B.BW / 2 + 14, TW = Math.max(70, B.BW);
+    const items = [];
+    const add = (key, node, size, flip, parent) => items.push({ key, node, size, flip, parent });
+    B.PARTS.forEach(p => { if (!p.dnp && p.bom !== false && this.objs[p.ref]) add(p.ref, this.objs[p.ref].group, null, p.side === 'bottom'); });
+    if (B.oled) add('DSP1', this.oledGroup, [38, 12]);
+    this.coolers.forEach(c => { add(c.spec.ref, c.group, [c.spec.size, c.spec.size]); add(c.spec.ref + ':fan', c.fan, [c.spec.fan, c.spec.fan], false, c.group); });
+    const firstPassive = items.length;
+    Object.values(this.objs).forEach(o => { if (o.isPassive && !o.data.dnp) add(o.data.ref, o.group, null, o.side === 'bottom'); });
+
+    this.trayPos = {};
+    let cx = x0, cz = -B.BH / 2, row = 0;
+    const box = new THREE.Box3(), sz = new THREE.Vector3();
+    items.forEach((it, i) => {
+      if (i === firstPassive && cx > x0) { cx = x0; cz += row + gap * 2; row = 0; }
+      let [w, d] = it.size || (box.setFromObject(it.node).getSize(sz), [sz.x, sz.z]);
+      if (cx + w > x0 + TW && cx > x0) { cx = x0; cz += row + gap; row = 0; }
+      // hx/hz: home in the node's parent space; wx/wz: home in board space (for framing)
+      const t = { node: it.node, flip: it.flip, parent: it.parent, tx: cx + w / 2, ty: this.SURF_T, tz: cz + d / 2,
+        hx: it.node.position.x, hz: it.node.position.z };
+      const w0 = it.parent ? it.parent.position : it.node.position;
+      t.wx = w0.x; t.wz = w0.z;
+      this.trayPos[it.key] = t;
+      cx += w + gap; row = Math.max(row, d);
+    });
+    const depth = cz + row + gap - (-B.BH / 2 - gap);
+    this.trayPlate = new THREE.Mesh(new THREE.BoxGeometry(TW + gap * 2, 0.8, depth), new THREE.MeshStandardMaterial({ color: 0x2a2f33, roughness: .9 }));
+    this.trayPlate.position.set(x0 + TW / 2, this.SURF_T - 0.45, -B.BH / 2 - gap + depth / 2);
+    this.trayPlate.receiveShadow = true;
+    this.boardGroup.add(this.trayPlate);
+  }
+
+  // Runs after the explode pass, which has already written each node's home height.
+  _animateTray(dt) {
+    const k = Math.min(1, dt * 4);
+    let moving = false;
+    Object.entries(this.trayPos).forEach(([key, t]) => {
+      const n = t.node.position, placed = !this.tray || this.tray.has(key);
+      const p = t.parent ? t.parent.position : null;
+      const tx = placed ? t.hx : t.tx - (p ? p.x : 0), tz = placed ? t.hz : t.tz - (p ? p.z : 0);
+      const ty = placed ? n.y : t.ty - (p ? p.y : 0);
+      n.x += (tx - n.x) * k; n.z += (tz - n.z) * k;
+      const dist = Math.hypot(tx - n.x, tz - n.z);
+      if (dist < 0.01) { n.x = tx; n.z = tz; } else moving = true;
+      n.y = ty + Math.min(30, dist * 0.5);
+      const rx = t.flip && !placed ? Math.PI : 0;
+      t.node.rotation.x += (rx - t.node.rotation.x) * k;
+    });
+    if (moving) this.labelAnchorsAt = NaN;
+  }
+
   _isCooler(ref) { return this.B.COOLERS.some(c => c.ref === ref); }
   _underCooler(ref) { return this.B.COOLERS.some(c => c.under.includes(ref)); }
 
@@ -604,9 +685,13 @@ export class Scene {
     const box = new THREE.Box3();
     refs.forEach(r => { if (this.objs[r]) box.expandByObject(this.objs[r].group); });
     if (box.isEmpty()) return this.setView(side === 'bottom' ? 'bottom' : side === 'top' ? 'top' : 'iso');
+    this._frameBox(box, side);
+  }
+
+  _frameBox(box, side, zoomOut = 1) {
     const c = box.getCenter(new THREE.Vector3()), size = box.getSize(new THREE.Vector3());
     const rad = Math.max(size.x, size.z, 8) * 0.5;
-    const dist = Math.min(220, Math.max(48, rad * 3.4 + 30));
+    const dist = Math.min(220 * zoomOut, Math.max(48, rad * 3.4 + 30) * zoomOut);
     const dir = side === 'bottom' ? new THREE.Vector3(.35, -1, .55) : side === 'top' ? new THREE.Vector3(.3, 1, .6) : new THREE.Vector3(.6, .8, .75);
     dir.normalize();
     this._flyTo(c.clone().add(dir.multiplyScalar(dist)), c);
@@ -696,7 +781,7 @@ export class Scene {
         else vis = this.camera.position.y < 5;
         const { highlight, selected } = this.state;
         if (highlight && !highlight.includes(ref) && ref !== selected) vis = false;
-        if (this.coolGroup.visible && this._underCooler(ref) && this.camera.position.y > 0) vis = false;
+        if (this.coolGroup.visible && this._underCooler(ref) && this.camera.position.y > 0 && (!this.tray || this.B.COOLERS.some(c => this.tray.has(c.ref)))) vis = false;
       }
       if (!vis) { o.labelEl.style.display = 'none'; return; }
       this._v.project(this.camera);
@@ -734,6 +819,7 @@ export class Scene {
     });
     this.coolers.forEach(c => { c.group.position.y = this.SURF_T + ex * 22; c.fan.position.y = c.fanY + ex * 18; if (this.coolGroup.visible) c.blades.rotation.y += dt * 9; });
     if (this.oledGroup) this.oledGroup.position.y = this.SURF_T + 8.5 + ex * 14;
+    if (this.trayPos) this._animateTray(dt);
     Object.values(this.flowObjs).forEach(f => {
       if (!f.group.visible) return;
       f.parts.forEach(s => { s.userData.t = (s.userData.t + dt * f.speed * (60 / s.userData.curve.getLength())) % 1; s.position.copy(s.userData.curve.getPointAt(s.userData.t)); });

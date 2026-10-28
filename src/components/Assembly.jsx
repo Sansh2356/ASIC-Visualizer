@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useStore, BOARDS } from '../store/index.js';
-import { ASSEMBLY, partQA } from '../data/assembly.js';
+import { stepsFor, placedAt, partQA } from '../data/assembly.js';
 import { applyStep } from './Tour.jsx';
 
 const key = id => `asicv-asm-${id}`;
@@ -15,7 +15,7 @@ export function Assembly({ sceneRef }) {
   const selected = useStore(s => s.selected);
   const objs = useStore(s => s._objs);
   const { setMode, select } = useStore.getState();
-  const steps = ASSEMBLY[boardId];
+  const steps = stepsFor(boardId);
 
   const [prog, setProg] = useState(() => loadProgress(boardId));
   useEffect(() => { setProg(loadProgress(boardId)); }, [boardId]);
@@ -31,14 +31,21 @@ export function Assembly({ sceneRef }) {
     if (!sc || !s) return;
     select(null);
     applyStep(sc, board, s);
+    sc.setTray(placedAt(steps, idx));
+    // Keep the parts being placed lit, e.g. the heatsink under a fan being mounted.
+    if (s.place?.length) sc.applyHighlightForTour([...new Set([...s.refs, ...s.place.map(k => k.split(':')[0])])], s.refs[0] || null);
+    if (s.place?.length || !s.refs.length) sc.frameTray(s.place, s.side);
   }, [idx, boardId, !!steps]);
 
   // Leaving assembly mode: put the scene back the way the free-mode toggles say.
   useEffect(() => () => {
     const sc = sceneRef?.current, st = useStore.getState();
     if (!sc) return;
+    sc.setTray(null);
     sc.applyHighlightForTour([], st.selected);
     sc.setCoolVisible(st.showCool);
+    sc.setPassivesVisible(st.showPassives);
+    if (sc.B?.oled) sc.setOledVisible(st.showOled);
     sc.state.explodeTarget = st.explode ? 1 : 0;
     sc.applyFlows(st.activeFlows);
   }, []);

@@ -1,3 +1,5 @@
+import { BOARDS } from "./index.js";
+
 /* ====================================================================
    Assembly guides, one ordered list of steps per board.
    A step uses the same camera fields as a TOUR step (refs, side, cool,
@@ -46,9 +48,9 @@ const poolStep = (refs, side, expect) => ({
 });
 
 const GAMMA = [
-  { t: "Inspect the board", refs: [], side: "iso", flows: [],
+  { t: "Inspect the finished board", refs: [], side: "iso", flows: [],
     do: [
-      "Unpack the board and look at both sides under good light.",
+      "Look at both sides of the finished board under good light.",
       "Top side: the ESP32-S3 module (U4), the BM1370 ASIC (U8), the barrel jack, USB-C and fan header. Bottom side: the power stage.",
       "Look for cracked parts, solder bridges, and bent pins on the fan header J6.",
     ],
@@ -69,7 +71,7 @@ const GAMMA = [
     fix: [
       ["The chip runs hot even with the fan on", "Take the heatsink off and look at the paste. If it doesn't cover the whole chip, or there are bare patches, clean it and reapply."],
     ] },
-  { t: "Mount the heatsink", refs: ["U8", "H5", "H6", "H7", "H8"], side: "iso", cool: true, explode: true, flows: [],
+  { t: "Mount the heatsink", place: ["HS1"], refs: ["U8", "H5", "H6", "H7", "H8"], side: "iso", cool: true, flows: [],
     do: [
       "Place the 40 × 40 mm heatsink square on the ASIC.",
       "Clamp it through the four 3.5 mm holes around the chip (H5–H8).",
@@ -81,7 +83,7 @@ const GAMMA = [
     fix: [
       ["The heatsink rocks or tilts", "Loosen all four screws and tighten them again in a cross pattern. The heatsink must sit flat on the chip."],
     ] },
-  { t: "Mount the fan and plug it into J6", refs: ["J6"], side: "top", flows: ["thermal"],
+  { t: "Mount the fan and plug it into J6", place: ["HS1:fan"], refs: ["J6"], side: "top", flows: ["thermal"],
     do: [
       "Fix a 40 mm, 5 V, 4-pin PWM fan on top of the heatsink so it blows onto the fins.",
       "Plug the fan cable into J6. The silkscreen next to it reads PWM · TAC · 5V · GND.",
@@ -131,7 +133,7 @@ GAMMA[GAMMA.length - 1].fix.push(
 
 const HEX_ASICS = ["A1", "A2", "A3", "A4", "A5", "A6"];
 const HEX = [
-  { t: "Inspect the board", refs: [], side: "iso", flows: [],
+  { t: "Inspect the finished board", refs: [], side: "iso", flows: [],
     do: [
       "Look at both sides under good light.",
       "Front: the six BM1370 ASICs (A1–A6) that share one heatsink. Back: the ESP32-S3, the four-phase power stage, the fan headers and the 12 V input.",
@@ -152,7 +154,7 @@ const HEX = [
     fix: [
       ["One chip is much hotter than the others", "That chip is not touching the heatsink well. Check the paste spread and that the heatsink sits flat across all six."],
     ] },
-  { t: "Mount the heatsink", refs: HEX_ASICS, side: "iso", cool: true, explode: true, flows: [],
+  { t: "Mount the heatsink", place: ["HS1"], refs: HEX_ASICS, side: "iso", cool: true, flows: [],
     do: [
       "Place the heatsink over the six-chip area so it covers A1–A6.",
       "Fit it with the hardware supplied with your heatsink, tightening evenly so it sits flat.",
@@ -161,7 +163,7 @@ const HEX = [
       ["Which heatsink fits?", "The board has no heatsink footprint, so the heatsink and fan in this view are generic stand-ins sized to the ASIC area. Use the heatsink your board's vendor supplies."],
     ],
     fix: [] },
-  { t: "Plug in the fans", refs: ["J3", "J6", "J7"], side: "bottom", flows: ["thermal"],
+  { t: "Plug in the fans", place: ["HS1:fan"], refs: ["J3", "J6", "J7"], side: "bottom", flows: ["thermal"],
     do: [
       "Use 12 V, 4-pin PWM fans.",
       "Plug the main fan into J3. Add more fans on J6 and J7 if you use them.",
@@ -212,7 +214,7 @@ const HEX = [
 
 const NQPP_ASICS = ["U19", "U25", "U20", "U26"];
 const NQPP = [
-  { t: "Inspect the board", refs: [], side: "iso", flows: [],
+  { t: "Inspect the finished board", refs: [], side: "iso", flows: [],
     do: [
       "Look at both sides under good light.",
       "Top: the four BM1370s in a 2 × 2 block, the three-phase power stage, and the T-Display-S3 controller (U30) on two 12-pin headers. Bottom: the decoupling capacitors under each chip.",
@@ -234,7 +236,7 @@ const NQPP = [
     fix: [
       ["One part of the board runs much hotter", "A chip isn't touching the heatsink well. Check the paste and that the heatsink sits flat across all four."],
     ] },
-  { t: "Mount the heatsink", refs: NQPP_ASICS, side: "iso", cool: true, explode: true, flows: [],
+  { t: "Mount the heatsink", place: ["HS1"], refs: NQPP_ASICS, side: "iso", cool: true, flows: [],
     do: [
       "Place the heatsink over the four-chip block.",
       "Screw it down through the M3 holes on the 75 mm square around the chips, tightening in a cross pattern.",
@@ -243,7 +245,7 @@ const NQPP = [
       ["Which heatsink fits?", "One that matches the M3 holes on a 75 mm square. The heatsink and fan in this view are stand-ins sized to that pattern, not a specific product."],
     ],
     fix: [] },
-  { t: "Plug in the fans", refs: ["M1", "M2"], side: "top", flows: ["thermal"],
+  { t: "Plug in the fans", place: ["HS1:fan"], refs: ["M1", "M2"], side: "top", flows: ["thermal"],
     do: [
       "Use 12 V, 4-pin PWM fans.",
       "Plug them into M1 and M2.",
@@ -298,6 +300,61 @@ NQPP[NQPP.length - 1].fix.push(
 
 export const ASSEMBLY = { gamma: GAMMA, hex: HEX, nerdqaxepp: NQPP };
 
+/* Placement steps, built from the board's own part list: every populated part
+   starts in the tray beside the bare PCB and moves onto it in its step. */
+const PLACE_ORDER = [
+  ["power", "Place the power stage"],
+  ["asic", "Place the ASIC and its clock"],
+  ["control", "Place the controller"],
+  ["thermal", "Place the thermal parts"],
+  ["io", "Place the connectors and buttons"],
+];
+const PLACE_QA = [
+  ["Is this the real soldering order?", "It groups the parts by subsystem so you can see where each one goes. A real build reflows one side of the board, then the other."],
+];
+const sideName = s => s === "bottom" ? "bottom side" : "top side";
+
+function placementSteps(B) {
+  const parts = B.PARTS.filter(p => !p.dnp && p.bom !== false);
+  const passives = B.PASSIVES.filter(p => p[1] !== "DNP").map(p => p[0]);
+  const steps = [
+    { t: "Lay out the parts", refs: [], side: "iso", flows: [],
+      do: [
+        `Every populated part of the ${B.title} is laid out in the tray beside the bare PCB: ${parts.length} main parts and ${passives.length} passives.`,
+        "Each of the next steps moves one group of parts onto its footprint. Click any part, in the tray or on the board, to see what it is.",
+      ],
+      qa: PLACE_QA, fix: [] },
+    { t: "Place the passives", place: passives, refs: passives, side: "iso", flows: [],
+      do: [
+        `${passives.length} resistors and capacitors go down first, on both sides of the board.`,
+        "Most of them are decoupling capacitors that sit as close as possible to the pins they feed.",
+      ],
+      qa: [], fix: [] },
+  ];
+  PLACE_ORDER.forEach(([g, t]) => {
+    const ps = parts.filter(p => p.group === g);
+    const extra = g === "io" && B.oled ? ["DSP1"] : [];
+    if (!ps.length && !extra.length) return;
+    const refs = [...ps.map(p => p.ref), ...extra];
+    steps.push({ t, place: refs, refs, side: ps.every(p => p.side === "bottom") ? "bottom" : "top", flows: [],
+      do: [
+        ...ps.map(p => `${p.ref} · ${p.name}${p.part ? ` (${p.part})` : ""}, ${sideName(p.side)}`),
+        ...(extra.length ? ['DSP1 · 0.91" OLED module, plugs into ' + B.oled.header] : []),
+      ],
+      qa: g === "asic" ? PLACE_QA : [], fix: [] });
+  });
+  return steps;
+}
+
+const cache = {};
+export function stepsFor(boardId) {
+  if (!ASSEMBLY[boardId] || !BOARDS[boardId]) return null;
+  return cache[boardId] ||= [...placementSteps(BOARDS[boardId]), ...ASSEMBLY[boardId]];
+}
+
+// Refs on the board once steps 0..idx are done.
+export const placedAt = (steps, idx) => new Set(steps.slice(0, idx + 1).flatMap(s => s.place || []));
+
 // Questions about one part: every step that involves it.
 export const partQA = (boardId, ref) =>
-  (ASSEMBLY[boardId] || []).filter(s => s.refs.includes(ref));
+  (stepsFor(boardId) || []).filter(s => s.refs.includes(ref) && (s.qa.length || s.fix.length || !s.place));
