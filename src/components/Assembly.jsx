@@ -83,12 +83,26 @@ export function Assembly({ sceneRef }) {
           <span className="asm-count">{prog.done.length}/{steps.length} done</span>
         </div>
         <ol className="asm-list">
-          {steps.map((st, k) => (
-            <li key={k} aria-current={k === idx} className={prog.done.includes(k) ? 'done' : ''}>
-              <input type="checkbox" checked={prog.done.includes(k)} onChange={() => toggleDone(k)} aria-label={`Mark "${st.t}" done`} />
-              <button onClick={() => goStep(k)}>{st.t}</button>
-            </li>
-          ))}
+          {groupSteps(steps).map(([group, ks]) => {
+            const row = k => (
+              <li key={k} aria-current={k === idx} className={prog.done.includes(k) ? 'done' : ''}>
+                <input type="checkbox" checked={prog.done.includes(k)} onChange={() => toggleDone(k)} aria-label={`Mark "${steps[k].t}" done`} />
+                <button onClick={() => goStep(k)}>{steps[k].t}</button>
+              </li>
+            );
+            if (!group) return row(ks[0]);
+            const n = ks.filter(k => prog.done.includes(k)).length;
+            return (
+              <li key={group} className="asm-group">
+                <details open={ks.includes(idx)}>
+                  <summary className={n === ks.length ? 'done' : ''}>
+                    {group} <span className="asm-count">{n}/{ks.length}</span>
+                  </summary>
+                  <ol className="asm-list">{ks.map(row)}</ol>
+                </details>
+              </li>
+            );
+          })}
         </ol>
 
         {part && (
@@ -131,4 +145,15 @@ function QA({ qa, fix, title }) {
       {fix.map(([q, a]) => <details key={q} className="fix"><summary>{q}</summary><p>{a}</p></details>)}
     </>
   );
+}
+
+// Consecutive steps that share a `group` collapse into one list row: [group, [indices]].
+function groupSteps(steps) {
+  const out = [];
+  steps.forEach((st, k) => {
+    const last = out[out.length - 1];
+    if (st.group && last?.[0] === st.group) last[1].push(k);
+    else out.push([st.group || null, [k]]);
+  });
+  return out;
 }

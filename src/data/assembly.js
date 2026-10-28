@@ -343,7 +343,7 @@ function placementSteps(B) {
       ],
       qa: g === "asic" ? PLACE_QA : [], fix: [] });
   });
-  return steps;
+  return steps.map(st => ({ ...st, group: "Build the board" }));
 }
 
 const cache = {};
