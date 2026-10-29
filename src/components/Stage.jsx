@@ -5,7 +5,7 @@ import { CompareTable } from './CompareTable.jsx';
 
 function esc(s) { return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
-export function Stage({ sceneRefOut }) {
+export function Stage({ sceneRefOut, children }) {
   const canvasRef = useRef(null);
   const labelsRef = useRef(null);
   const tipRef = useRef(null);
@@ -62,6 +62,7 @@ export function Stage({ sceneRefOut }) {
       <div id="loading" hidden>BUILDING BOARD…</div>
       <div id="diagram" ref={diagramRef} hidden={pane !== 'diag'} />
       <CompareTable />
+      {children}
     </main>
   );
 }
