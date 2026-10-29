@@ -893,3 +893,5 @@ details.fix summary::marker { color: var(--c-thermal); }
 .tour-panel input[type=checkbox]:disabled { cursor: not-allowed; }
 .asm-note { font-size: 12.5px; color: var(--muted); margin: 0; }
 .asm-link { background: none; border: 0; padding: 0; color: var(--c-control); font-size: inherit; cursor: pointer; text-decoration: underline; }
+.btn.primary:disabled:hover { border-color: var(--gold-bright); color: #fff; }
+.btn:disabled { cursor: not-allowed; }

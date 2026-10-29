@@ -162,10 +162,13 @@ export function Assembly({ sceneRef }) {
       </div>
       <div className="tour-panel-nav">
         <button className="btn" disabled={idx === 0} onClick={() => goStep(idx - 1)}>← Back</button>
-        <button className="btn primary" onClick={() => {
-          tick(stepActs(steps, idx), true);
-          if (idx === steps.length - 1) setMode('free'); else goStep(idx + 1);
-        }}>
+        {/* Moving on needs every action of this step ticked; the button never ticks anything itself. */}
+        <button
+          className="btn primary"
+          disabled={state(idx) !== 'all'}
+          title={state(idx) !== 'all' ? `Tick all ${s.do.length} actions of this step first` : undefined}
+          onClick={() => { if (idx === steps.length - 1) setMode('free'); else goStep(idx + 1); }}
+        >
           {idx === steps.length - 1 ? 'Finish' : 'Done, next →'}
         </button>
       </div>
