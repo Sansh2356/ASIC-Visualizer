@@ -321,7 +321,8 @@ function placementSteps(B) {
     { t: "Lay out the parts", refs: [], side: "iso", flows: [],
       do: [
         `Every populated part of the ${B.title} is laid out in the tray beside the bare PCB: ${parts.length} main parts and ${passives.length} passives.`,
-        "Each of the next steps moves one group of parts onto its footprint. Click any part, in the tray or on the board, to see what it is.",
+        "Tick a step to move its parts onto their footprints; untick it to send them back to the tray, along with anything that sits on them. Steps can be ticked in any order.",
+        "Click any part, in the tray or on the board, to see what it is.",
       ],
       qa: PLACE_QA, fix: [] },
     { t: "Place the passives", place: passives, refs: passives, side: "iso", flows: [],
@@ -352,8 +353,36 @@ export function stepsFor(boardId) {
   return cache[boardId] ||= [...placementSteps(BOARDS[boardId]), ...ASSEMBLY[boardId]];
 }
 
-// Refs on the board once steps 0..idx are done.
-export const placedAt = (steps, idx) => new Set(steps.slice(0, idx + 1).flatMap(s => s.place || []));
+// Parts on the board: whatever the checked steps place, in any order.
+export const placedBy = (steps, done) => new Set(done.flatMap(i => steps[i]?.place || []));
+
+/* Step k relies on step j when j places a part that k works on (a ref of k), or
+   the part k's own part mounts onto (a fan "HS1:fan" sits on "HS1"). */
+const preCache = new WeakMap();
+export function prereqs(steps) {
+  if (preCache.has(steps)) return preCache.get(steps);
+  const placer = {};
+  steps.forEach((s, j) => (s.place || []).forEach(k => { placer[k] = j; }));
+  const pre = steps.map((s, k) => {
+    const needs = [...s.refs, ...(s.place || []).filter(p => p.includes(':')).map(p => p.split(':')[0])];
+    return [...new Set(needs.map(r => placer[r]).filter(j => j !== undefined && j !== k))];
+  });
+  preCache.set(steps, pre);
+  return pre;
+}
+
+// Check or uncheck step i. Checking also checks what it relies on;
+// unchecking also unchecks everything that relies on it.
+export function setDone(steps, done, i, on) {
+  const pre = prereqs(steps), out = new Set(done);
+  const walk = k => {
+    if (out.has(k) === on) return;
+    if (on) { out.add(k); pre[k].forEach(walk); }
+    else { out.delete(k); pre.forEach((p, j) => { if (p.includes(k)) walk(j); }); }
+  };
+  walk(i);
+  return [...out].sort((a, b) => a - b);
+}
 
 // Questions about one part: every step that involves it.
 export const partQA = (boardId, ref) =>

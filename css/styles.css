@@ -884,3 +884,4 @@ details.fix summary::marker { color: var(--c-thermal); }
 .tour-panel input[type=checkbox] { accent-color: var(--gold-bright); }
 .btn:disabled { opacity: .45; cursor: default; }
 .btn:disabled:hover { border-color: var(--line); color: var(--muted); }
+.tour-panel .asm-group summary input { margin: 0 6px 0 0; }

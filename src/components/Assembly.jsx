@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useStore, BOARDS } from '../store/index.js';
-import { stepsFor, placedAt, partQA } from '../data/assembly.js';
+import { stepsFor, placedBy, setDone, partQA } from '../data/assembly.js';
 import { applyStep, resetStep } from './Tour.jsx';
 
 const key = id => `asicv-asm-${id}`;
@@ -26,12 +26,17 @@ export function Assembly({ sceneRef }) {
   const idx = Math.min(prog.idx, (steps?.length || 1) - 1);
   const s = steps?.[idx];
 
+  // The checkboxes alone decide which parts are on the board.
+  useEffect(() => {
+    if (steps) sceneRef?.current?.setTray(placedBy(steps, prog.done));
+  }, [prog.done, boardId]);
+
   useEffect(() => {
     const sc = sceneRef?.current;
     if (!sc || !s) return;
     select(null);
     applyStep(sc, board, s);
-    sc.setTray(placedAt(steps, idx));
+    sc.setTray(placedBy(steps, prog.done));
     // Keep the parts being placed lit, e.g. the heatsink under a fan being mounted.
     if (s.place?.length) sc.applyHighlightForTour([...new Set([...s.refs, ...s.place.map(k => k.split(':')[0])])], s.refs[0] || null);
     if (s.place?.length || !s.refs.length) sc.frameTray(s.place, s.side);
@@ -46,7 +51,8 @@ export function Assembly({ sceneRef }) {
   }, []);
 
   const goStep = i => setProg(p => ({ ...p, idx: Math.max(0, Math.min(steps.length - 1, i)) }));
-  const toggleDone = i => setProg(p => ({ ...p, done: p.done.includes(i) ? p.done.filter(d => d !== i) : [...p.done, i] }));
+  const markDone = (ks, on) => setProg(p => ({ ...p, done: ks.reduce((d, k) => setDone(steps, d, k, on), p.done) }));
+  const toggleDone = k => markDone([k], !prog.done.includes(k));
 
   const header = (
     <div className="tour-panel-header">
@@ -91,6 +97,13 @@ export function Assembly({ sceneRef }) {
               <li key={group} className="asm-group">
                 <details open={ks.includes(idx)}>
                   <summary className={n === ks.length ? 'done' : ''}>
+                    <input
+                      type="checkbox" checked={n === ks.length}
+                      ref={el => { if (el) el.indeterminate = n > 0 && n < ks.length; }}
+                      onClick={e => e.stopPropagation()}
+                      onChange={() => markDone(ks, n < ks.length)}
+                      aria-label={`Mark all of "${group}" done`}
+                    />
                     {group} <span className="asm-count">{n}/{ks.length}</span>
                   </summary>
                   <ol className="asm-list">{ks.map(row)}</ol>
@@ -123,7 +136,7 @@ export function Assembly({ sceneRef }) {
       <div className="tour-panel-nav">
         <button className="btn" disabled={idx === 0} onClick={() => goStep(idx - 1)}>← Back</button>
         <button className="btn primary" onClick={() => {
-          if (!prog.done.includes(idx)) toggleDone(idx);
+          markDone([idx], true);
           if (idx === steps.length - 1) setMode('free'); else goStep(idx + 1);
         }}>
           {idx === steps.length - 1 ? 'Finish' : 'Done, next →'}
