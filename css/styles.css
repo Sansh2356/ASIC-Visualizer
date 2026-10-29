@@ -850,13 +850,12 @@ main.stage {
 .tabs button[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--gold-bright); font-weight: 600; }
 
 /* ── Assembly mode ──────────────────────────────────────── */
-.asm-progress { display: flex; justify-content: space-between; align-items: baseline; }
 .asm-count { font-family: var(--f-mono); font-size: 11px; color: var(--muted); }
 .asm-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 1px; }
-.asm-list li { display: flex; align-items: center; gap: 6px; border-radius: 4px; padding: 2px 4px; }
+.asm-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; border-radius: 4px; padding: 2px 4px; }
 .asm-list li[aria-current="true"] { background: var(--panel-2); }
 .asm-list li button { background: none; border: 0; padding: 2px 0; text-align: left; font-size: 12.5px; color: var(--fg); cursor: pointer; flex: 1; }
-.asm-list li.done button { color: var(--muted); text-decoration: line-through; }
+.asm-list li.done > button { color: var(--muted); }
 .asm-do { margin: 0; padding-left: 20px; color: var(--fg); font-size: 13.5px; line-height: 1.55; }
 .asm-do li + li { margin-top: 4px; }
 .tour-panel h3, .insp details + h3 {
@@ -872,7 +871,6 @@ details.fix summary::marker { color: var(--c-thermal); }
 .asm-part-head b { font-family: var(--f-mono); color: var(--gold); }
 .asm-part-head button { margin-left: auto; }
 .asm-from { font-size: 11px; color: var(--muted); margin-top: 6px; }
-.asm-tip { font-size: 12px; color: var(--muted); margin: 0; }
 .tour-panel .asm-group details { border: 0; padding: 0; margin: 0; }
 .tour-panel .asm-group summary { display: flex; justify-content: space-between; align-items: baseline; padding: 4px 4px 4px 2px; font-size: 12.5px; font-weight: 600; }
 .tour-panel .asm-group summary.done { color: var(--muted); }
@@ -888,10 +886,11 @@ details.fix summary::marker { color: var(--c-thermal); }
 .asm-acts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .asm-acts label { display: flex; gap: 8px; align-items: flex-start; font-size: 13.5px; line-height: 1.5; color: var(--fg); cursor: pointer; }
 .asm-acts label input { margin-top: 4px; flex-shrink: 0; }
-.asm-acts label.done span { color: var(--muted); text-decoration: line-through; }
+.asm-acts label.done span { color: var(--muted); }
 .asm-acts input:disabled + span { color: var(--muted); }
 .tour-panel input[type=checkbox]:disabled { cursor: not-allowed; }
 .asm-note { font-size: 12.5px; color: var(--muted); margin: 0; }
 .asm-link { background: none; border: 0; padding: 0; color: var(--c-control); font-size: inherit; cursor: pointer; text-decoration: underline; }
 .btn.primary:disabled:hover { border-color: var(--gold-bright); color: #fff; }
 .btn:disabled { cursor: not-allowed; }
+.asm-step-body { flex-basis: 100%; display: flex; flex-direction: column; gap: 8px; padding: 6px 2px 8px 22px; }

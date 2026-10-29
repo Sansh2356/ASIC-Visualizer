@@ -89,6 +89,32 @@ export function Assembly({ sceneRef }) {
     );
   }
 
+  // The current step opens in place in the list: its note, what it waits for, and its actions.
+  const body = (
+    <div className="asm-step-body">
+      {s.note && <p className="asm-note">{s.note}</p>}
+      {locked(idx).length > 0 && (
+        <p className="note">
+          Finish first:{' '}
+          {locked(idx).map((j, i) => <Fragment key={j}>{i > 0 && ', '}<button className="asm-link" onClick={() => goStep(j)}>{steps[j].t}</button></Fragment>)}
+        </p>
+      )}
+      <ul className="asm-acts">
+        {s.do.map((t, a) => {
+          const id = actId(idx, a);
+          return (
+            <li key={id}>
+              <label className={prog.done.includes(id) ? 'done' : ''}>
+                <input type="checkbox" checked={prog.done.includes(id)} disabled={!!locked(idx).length} onChange={e => tick([id], e.target.checked)} />
+                <span>{t}</span>
+              </label>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+
   const part = selected && objs[selected]?.data;
   const partSteps = part ? partQA(boardId, selected) : [];
 
@@ -96,16 +122,14 @@ export function Assembly({ sceneRef }) {
     <div className="tour-panel">
       {header}
       <div className="tour-panel-body">
-        <div className="asm-progress">
-          <span className="tour-step-label">Step {idx + 1}/{steps.length}</span>
-          <span className="asm-count">{steps.filter((_, k) => state(k) === 'all').length}/{steps.length} done</span>
-        </div>
+        <span className="tour-step-label">Step {idx + 1}/{steps.length}</span>
         <ol className="asm-list">
           {groupSteps(steps).map(([group, ks]) => {
             const row = k => (
               <li key={k} aria-current={k === idx} className={state(k) === 'all' ? 'done' : locked(k).length ? 'locked' : ''}>
                 {stepBox([k], `Mark "${steps[k].t}" done`)}
                 <button onClick={() => goStep(k)}>{steps[k].t}</button>
+                {k === idx && body}
               </li>
             );
             if (!group) return row(ks[0]);
@@ -136,29 +160,7 @@ export function Assembly({ sceneRef }) {
           </div>
         )}
 
-        <h2 className="tour-step-title">{s.t}</h2>
-        {s.note && <p className="asm-note">{s.note}</p>}
-        {locked(idx).length > 0 && (
-          <p className="note">
-            Finish first:{' '}
-            {locked(idx).map((j, i) => <Fragment key={j}>{i > 0 && ', '}<button className="asm-link" onClick={() => goStep(j)}>{steps[j].t}</button></Fragment>)}
-          </p>
-        )}
-        <ul className="asm-acts">
-          {s.do.map((t, a) => {
-            const id = actId(idx, a);
-            return (
-              <li key={id}>
-                <label className={prog.done.includes(id) ? 'done' : ''}>
-                  <input type="checkbox" checked={prog.done.includes(id)} disabled={!!locked(idx).length} onChange={e => tick([id], e.target.checked)} />
-                  <span>{t}</span>
-                </label>
-              </li>
-            );
-          })}
-        </ul>
         <QA qa={s.qa} fix={s.fix} />
-        <p className="asm-tip">Click any part on the board to see questions about it.</p>
       </div>
       <div className="tour-panel-nav">
         <button className="btn" disabled={idx === 0} onClick={() => goStep(idx - 1)}>← Back</button>

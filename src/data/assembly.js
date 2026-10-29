@@ -323,7 +323,7 @@ function placementSteps(B) {
   const bySide = side => passives.filter(p => p[9] === side).map(p => p[0]);
   const steps = [
     { t: "Lay out the parts", refs: [], side: "iso", flows: [],
-      note: "Tick an action to put its part on the board; untick it to send the part back to the tray, along with anything that relies on it. A step stays locked until the steps it needs are done.",
+      note: "Tick an action to put its part on the board; untick it to send the part back to the tray, along with anything that relies on it. A step stays locked until the steps it needs are done. Click any part to see questions about it.",
       do: [`Check the tray against the parts list: ${parts.length} main parts and ${passives.length} passives.`],
       actPlace: [[]],
       qa: PLACE_QA, fix: [] },
