@@ -894,3 +894,7 @@ details.fix summary::marker { color: var(--c-thermal); }
 .btn.primary:disabled:hover { border-color: var(--gold-bright); color: #fff; }
 .btn:disabled { cursor: not-allowed; }
 .asm-step-body { flex-basis: 100%; display: flex; flex-direction: column; gap: 8px; padding: 6px 2px 8px 22px; }
+.asm-progress { display: flex; justify-content: space-between; align-items: center; }
+.asm-reset { background: none; border: 1px solid var(--line); border-radius: 4px; padding: 1px 7px; font-family: var(--f-mono); font-size: 10.5px; color: var(--muted); cursor: pointer; }
+.asm-reset:hover:not(:disabled) { border-color: var(--gold); color: var(--fg); }
+.asm-reset:disabled { opacity: .45; cursor: not-allowed; }

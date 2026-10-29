@@ -122,7 +122,15 @@ export function Assembly({ sceneRef }) {
     <div className="tour-panel">
       {header}
       <div className="tour-panel-body">
-        <span className="tour-step-label">Step {idx + 1}/{steps.length}</span>
+        <div className="asm-progress">
+          <span className="tour-step-label">Step {idx + 1}/{steps.length}</span>
+          <button
+            className="asm-reset"
+            disabled={!prog.done.length && idx === 0}
+            onClick={() => { if (confirm(`Reset all assembly progress for the ${board.title}?`)) setProg({ idx: 0, done: [] }); }}
+            title="Untick every action and send all parts back to the tray"
+          >↺ Reset</button>
+        </div>
         <ol className="asm-list">
           {groupSteps(steps).map(([group, ks]) => {
             const row = k => (
