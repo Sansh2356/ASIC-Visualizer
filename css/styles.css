@@ -859,7 +859,6 @@ main.stage {
 .asm-list li.done button { color: var(--muted); text-decoration: line-through; }
 .asm-do { margin: 0; padding-left: 20px; color: var(--fg); font-size: 13.5px; line-height: 1.55; }
 .asm-do li + li { margin-top: 4px; }
-.asm-check { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--fg); }
 .tour-panel h3, .insp details + h3 {
   font-family: var(--f-display); font-size: 10.5px; letter-spacing: .12em;
   text-transform: uppercase; color: var(--muted); margin: 10px 0 2px;
@@ -885,3 +884,12 @@ details.fix summary::marker { color: var(--c-thermal); }
 .btn:disabled { opacity: .45; cursor: default; }
 .btn:disabled:hover { border-color: var(--line); color: var(--muted); }
 .tour-panel .asm-group summary input { margin: 0 6px 0 0; }
+.asm-list li.locked button { color: var(--muted); }
+.asm-acts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.asm-acts label { display: flex; gap: 8px; align-items: flex-start; font-size: 13.5px; line-height: 1.5; color: var(--fg); cursor: pointer; }
+.asm-acts label input { margin-top: 4px; flex-shrink: 0; }
+.asm-acts label.done span { color: var(--muted); text-decoration: line-through; }
+.asm-acts input:disabled + span { color: var(--muted); }
+.tour-panel input[type=checkbox]:disabled { cursor: not-allowed; }
+.asm-note { font-size: 12.5px; color: var(--muted); margin: 0; }
+.asm-link { background: none; border: 0; padding: 0; color: var(--c-control); font-size: inherit; cursor: pointer; text-decoration: underline; }

@@ -1,12 +1,14 @@
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { useStore, BOARDS } from '../store/index.js';
-import { stepsFor, placedBy, setDone, partQA } from '../data/assembly.js';
+import { stepsFor, placedBy, setActs, stepActs, stepState, blockedBy, actId, partQA } from '../data/assembly.js';
 import { applyStep, resetStep } from './Tour.jsx';
 
 const key = id => `asicv-asm-${id}`;
 function loadProgress(id) {
-  try { return { idx: 0, done: [], ...JSON.parse(localStorage.getItem(key(id))) }; }
-  catch { return { idx: 0, done: [] }; }
+  try {
+    const p = { idx: 0, done: [], ...JSON.parse(localStorage.getItem(key(id))) };
+    return { ...p, done: p.done.filter(d => typeof d === 'string') }; // drop pre-action progress
+  } catch { return { idx: 0, done: [] }; }
 }
 
 export function Assembly({ sceneRef }) {
@@ -51,8 +53,23 @@ export function Assembly({ sceneRef }) {
   }, []);
 
   const goStep = i => setProg(p => ({ ...p, idx: Math.max(0, Math.min(steps.length - 1, i)) }));
-  const markDone = (ks, on) => setProg(p => ({ ...p, done: ks.reduce((d, k) => setDone(steps, d, k, on), p.done) }));
-  const toggleDone = k => markDone([k], !prog.done.includes(k));
+  const tick = (ids, on) => setProg(p => ({ ...p, done: setActs(steps, p.done, ids, on) }));
+  const state = k => stepState(steps, prog.done, k);
+  const locked = k => blockedBy(steps, prog.done, k);
+  const stepBox = (ks, label) => {
+    const n = ks.filter(k => state(k) === 'all').length, some = ks.some(k => state(k) !== 'none');
+    return (
+      <input
+        type="checkbox" checked={n === ks.length}
+        ref={el => { if (el) el.indeterminate = some && n < ks.length; }}
+        disabled={!some && ks.every(k => locked(k).length)}
+        title={ks.length === 1 && locked(ks[0]).length ? 'Finish first: ' + locked(ks[0]).map(j => steps[j].t).join(', ') : undefined}
+        onClick={e => e.stopPropagation()}
+        onChange={() => tick(ks.flatMap(k => stepActs(steps, k)), n < ks.length)}
+        aria-label={label}
+      />
+    );
+  };
 
   const header = (
     <div className="tour-panel-header">
@@ -81,29 +98,23 @@ export function Assembly({ sceneRef }) {
       <div className="tour-panel-body">
         <div className="asm-progress">
           <span className="tour-step-label">Step {idx + 1}/{steps.length}</span>
-          <span className="asm-count">{prog.done.length}/{steps.length} done</span>
+          <span className="asm-count">{steps.filter((_, k) => state(k) === 'all').length}/{steps.length} done</span>
         </div>
         <ol className="asm-list">
           {groupSteps(steps).map(([group, ks]) => {
             const row = k => (
-              <li key={k} aria-current={k === idx} className={prog.done.includes(k) ? 'done' : ''}>
-                <input type="checkbox" checked={prog.done.includes(k)} onChange={() => toggleDone(k)} aria-label={`Mark "${steps[k].t}" done`} />
+              <li key={k} aria-current={k === idx} className={state(k) === 'all' ? 'done' : locked(k).length ? 'locked' : ''}>
+                {stepBox([k], `Mark "${steps[k].t}" done`)}
                 <button onClick={() => goStep(k)}>{steps[k].t}</button>
               </li>
             );
             if (!group) return row(ks[0]);
-            const n = ks.filter(k => prog.done.includes(k)).length;
+            const n = ks.filter(k => state(k) === 'all').length;
             return (
               <li key={group} className="asm-group">
                 <details open={ks.includes(idx)}>
                   <summary className={n === ks.length ? 'done' : ''}>
-                    <input
-                      type="checkbox" checked={n === ks.length}
-                      ref={el => { if (el) el.indeterminate = n > 0 && n < ks.length; }}
-                      onClick={e => e.stopPropagation()}
-                      onChange={() => markDone(ks, n < ks.length)}
-                      aria-label={`Mark all of "${group}" done`}
-                    />
+                    {stepBox(ks, `Mark all of "${group}" done`)}
                     {group} <span className="asm-count">{n}/{ks.length}</span>
                   </summary>
                   <ol className="asm-list">{ks.map(row)}</ol>
@@ -126,17 +137,33 @@ export function Assembly({ sceneRef }) {
         )}
 
         <h2 className="tour-step-title">{s.t}</h2>
-        <ol className="asm-do">{s.do.map((t, i) => <li key={i}>{t}</li>)}</ol>
-        <label className="asm-check">
-          <input type="checkbox" checked={prog.done.includes(idx)} onChange={() => toggleDone(idx)} /> Done
-        </label>
+        {s.note && <p className="asm-note">{s.note}</p>}
+        {locked(idx).length > 0 && (
+          <p className="note">
+            Finish first:{' '}
+            {locked(idx).map((j, i) => <Fragment key={j}>{i > 0 && ', '}<button className="asm-link" onClick={() => goStep(j)}>{steps[j].t}</button></Fragment>)}
+          </p>
+        )}
+        <ul className="asm-acts">
+          {s.do.map((t, a) => {
+            const id = actId(idx, a);
+            return (
+              <li key={id}>
+                <label className={prog.done.includes(id) ? 'done' : ''}>
+                  <input type="checkbox" checked={prog.done.includes(id)} disabled={!!locked(idx).length} onChange={e => tick([id], e.target.checked)} />
+                  <span>{t}</span>
+                </label>
+              </li>
+            );
+          })}
+        </ul>
         <QA qa={s.qa} fix={s.fix} />
         <p className="asm-tip">Click any part on the board to see questions about it.</p>
       </div>
       <div className="tour-panel-nav">
         <button className="btn" disabled={idx === 0} onClick={() => goStep(idx - 1)}>← Back</button>
         <button className="btn primary" onClick={() => {
-          markDone([idx], true);
+          tick(stepActs(steps, idx), true);
           if (idx === steps.length - 1) setMode('free'); else goStep(idx + 1);
         }}>
           {idx === steps.length - 1 ? 'Finish' : 'Done, next →'}
