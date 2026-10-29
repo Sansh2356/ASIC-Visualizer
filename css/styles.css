@@ -881,3 +881,6 @@ details.fix summary::marker { color: var(--c-thermal); }
 .tour-panel .asm-group summary .asm-count { margin-left: auto; padding-left: 8px; font-weight: 400; }
 .tour-panel .asm-group summary::before { content: '▸'; margin-right: 6px; color: var(--muted); }
 .tour-panel .asm-group details[open] > summary::before { content: '▾'; }
+.tour-panel input[type=checkbox] { accent-color: var(--gold-bright); }
+.btn:disabled { opacity: .45; cursor: default; }
+.btn:disabled:hover { border-color: var(--line); color: var(--muted); }

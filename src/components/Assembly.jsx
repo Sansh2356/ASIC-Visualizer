@@ -122,8 +122,11 @@ export function Assembly({ sceneRef }) {
       </div>
       <div className="tour-panel-nav">
         <button className="btn" disabled={idx === 0} onClick={() => goStep(idx - 1)}>← Back</button>
-        <button className="btn primary" disabled={idx === steps.length - 1} onClick={() => { if (!prog.done.includes(idx)) toggleDone(idx); goStep(idx + 1); }}>
-          Done, next →
+        <button className="btn primary" onClick={() => {
+          if (!prog.done.includes(idx)) toggleDone(idx);
+          if (idx === steps.length - 1) setMode('free'); else goStep(idx + 1);
+        }}>
+          {idx === steps.length - 1 ? 'Finish' : 'Done, next →'}
         </button>
       </div>
     </div>
