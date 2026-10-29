@@ -683,8 +683,15 @@ export class Scene {
   }
 
   _frameRefs(refs, side) {
-    const box = new THREE.Box3();
-    refs.forEach(r => { if (this.objs[r]) box.expandByObject(this.objs[r].group); });
+    const box = new THREE.Box3(), b = new THREE.Box3(), v = new THREE.Vector3();
+    refs.forEach(r => {
+      const o = this.objs[r]; if (!o) return;
+      b.setFromObject(o.group);
+      // A part still gliding out of the assembly tray is framed at its footprint.
+      const t = this.trayPos?.[r];
+      if (t) b.translate(v.set(t.wx - o.group.position.x, 0, t.wz - o.group.position.z));
+      box.union(b);
+    });
     if (box.isEmpty()) return this.setView(side === 'bottom' ? 'bottom' : side === 'top' ? 'top' : 'iso');
     this._frameBox(box, side);
   }
