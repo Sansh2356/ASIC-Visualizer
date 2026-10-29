@@ -717,9 +717,9 @@ export class Scene {
   _applyHighlight() {
     const set = this.state.highlight, sel = this.state.selected;
     Object.entries(this.objs).forEach(([ref, o]) => {
-      // Parts still waiting in the assembly tray stay at full colour.
-      const waiting = this.tray && this.trayPos[ref] && !this.tray.has(ref);
-      const on = !set || set.includes(ref) || ref === sel || waiting;
+      // In assembly mode nothing fades: placed and waiting parts keep their real
+      // colours, and the step's parts are marked by the emissive glow alone.
+      const on = !!this.tray || !set || set.includes(ref) || ref === sel;
       const isSel = ref === sel || (set && set.includes(ref));
       o.meshes.forEach(m => {
         const mats = Array.isArray(m.material) ? m.material : [m.material];
