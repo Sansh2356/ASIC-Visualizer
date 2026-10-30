@@ -5,14 +5,13 @@ import { CompareTable } from './CompareTable.jsx';
 
 function esc(s) { return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
-export function Stage({ sceneRefOut }) {
+export function Stage({ sceneRefOut, children }) {
   const canvasRef = useRef(null);
   const labelsRef = useRef(null);
   const tipRef = useRef(null);
   const legendRef = useRef(null);
 
   const pane = useStore(s => s.pane);
-  const mode = useStore(s => s.mode);
   const boardId = useStore(s => s.boardId);
   const flowLegend = useStore(s => s._flowLegend || []);
 
@@ -57,12 +56,13 @@ export function Stage({ sceneRefOut }) {
           <div key={f.id}><i style={{ background: f.color }} />{f.name}</div>
         ))}
       </div>
-      <div className="hint" id="hint" hidden={mode === 'tour'}>
-        Drag to orbit · scroll to zoom · right-drag to pan · click a part
+      <div className="hint" id="hint" hidden={pane !== 'board'}>
+        <span><kbd>Drag</kbd> orbit</span><span><kbd>Right-drag</kbd> pan</span><span><kbd>Scroll</kbd> zoom</span><span><kbd>Click</kbd> a part</span>
       </div>
       <div id="loading" hidden>BUILDING BOARD…</div>
       <div id="diagram" ref={diagramRef} hidden={pane !== 'diag'} />
       <CompareTable />
+      {children}
     </main>
   );
 }

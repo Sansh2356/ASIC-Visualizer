@@ -73,6 +73,7 @@ export function Header() {
           <div className="seg" role="group" aria-label="Mode">
             <button id="mFree" aria-pressed={mode === 'free'} onClick={() => setMode('free')}>Free</button>
             <button id="mTour" aria-pressed={mode === 'tour'} onClick={() => setMode('tour')}>Guided</button>
+            <button id="mAsm" aria-pressed={mode === 'assembly'} onClick={() => { setPane('board'); setMode('assembly'); }}>Assemble</button>
           </div>
           <div className="seg" role="group" aria-label="View">
             <button id="vBoard" aria-pressed={pane === 'board'} onClick={() => setPane('board')}>3D board</button>
